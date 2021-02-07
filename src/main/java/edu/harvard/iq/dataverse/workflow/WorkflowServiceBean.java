@@ -154,6 +154,7 @@ public class WorkflowServiceBean {
     @Asynchronous
     public void resume(PendingWorkflowInvocation pending, String body) {
         em.remove(em.merge(pending));
+        em.flush();
         doResume(pending, body);
     }
     
@@ -282,24 +283,14 @@ public class WorkflowServiceBean {
         em.persist(datasetLock);
         //flush creates the id
         em.flush();
-        ctxt.setLockId(datasetLock.getId());
+        ctxt.setLock(datasetLock);
     }
     
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     void unlockDataset( WorkflowContext ctxt ) throws CommandException {
-    	/* Since the lockDataset command above directly persists a lock to the database, 
-    	 * the ctxt.getDataset() is not updated and its list of locks can't be used. Using the named query below will find the workflow
-    	 * lock and remove it (actually all workflow locks for this Dataset but only one workflow should be active). 
-    	 */
-        TypedQuery<DatasetLock> lockCounter = em.createNamedQuery("DatasetLock.getLocksByDatasetId", DatasetLock.class);
-        lockCounter.setParameter("datasetId", ctxt.getDataset().getId());
-        List<DatasetLock> locks = lockCounter.getResultList();
-        for(DatasetLock lock: locks) {
-        	if(lock.getReason() == DatasetLock.Reason.Workflow && lock.getId()==ctxt.getLockId()) {
-                logger.fine("Removing lock");
-        		em.remove(lock);
-        	}
-        }
+       
+        em.remove(em.merge(ctxt.getLock()));
+        
         em.flush();
     }
     
@@ -319,7 +310,8 @@ public class WorkflowServiceBean {
             try {
         if ( ctxt.getType() == TriggerType.PrePublishDataset ) {
                 unlockDataset(ctxt);
-                
+                ctxt.setLock(null);
+                ctxt = refresh(ctxt);
                 //Now lock for FinalizePublication - this block mirrors that in PublishDatasetCommand
                 AuthenticatedUser user = ctxt.getRequest().getAuthenticatedUser();
                 DatasetLock lock = new DatasetLock(DatasetLock.Reason.finalizePublication, user);
@@ -458,7 +450,7 @@ public class WorkflowServiceBean {
     	 */
         WorkflowContext newCtxt =new WorkflowContext( ctxt.getRequest(), 
                 em.merge(ctxt.getDataset()), ctxt.getNextVersionNumber(), 
-                ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLockId());
+                ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLock());
         return newCtxt;
     }
 
