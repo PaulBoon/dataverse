@@ -162,22 +162,10 @@ public class WorkflowServiceBean {
      */
     @Asynchronous
     public void resume(PendingWorkflowInvocation pending, String body) {
-        removePending(pending);
+        em.remove(em.merge(pending));
         doResume(pending, body);
     }
     
-    // The workflow lock code has been releasing the lock at the end of the whole
-    // workflow, but the link with the pending object breaks that (as unlock tries
-    // to delete the lock in a separate transaction while resume only deletes the
-    // pending object at the end of it's transaction) - minimally we need to update
-    // pending to not reference the lock now, but should be OK to remove it as well
-    // (in this transaction).
-    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-    public void removePending(PendingWorkflowInvocation pending) {
-        pending.setLock(null);
-        em.remove(em.merge(pending));
-        em.flush();
-    }
     
     @Asynchronous
     private void forward(Workflow wf, WorkflowContext ctxt) {
@@ -310,14 +298,27 @@ public class WorkflowServiceBean {
         em.persist(datasetLock);
         //flush creates the id
         em.flush();
-        ctxt.setLock(datasetLock);
+        ctxt.setLockId(datasetLock.getId());
     }
     
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     void unlockDataset( WorkflowContext ctxt ) throws CommandException {
-       
-        em.remove(em.merge(ctxt.getLock()));
-        
+        /*
+         * Since the lockDataset command above directly persists a lock to the database,
+         * the ctxt.getDataset() is not updated and its list of locks can't be used.
+         * Using the named query below will find the workflow lock and remove it
+         * (actually all workflow locks for this Dataset but only one workflow should be
+         * active).
+         */
+        TypedQuery<DatasetLock> lockCounter = em.createNamedQuery("DatasetLock.getLocksByDatasetId", DatasetLock.class);
+        lockCounter.setParameter("datasetId", ctxt.getDataset().getId());
+        List<DatasetLock> locks = lockCounter.getResultList();
+        for(DatasetLock lock: locks) {
+        	if(lock.getReason() == DatasetLock.Reason.Workflow && lock.getId()==ctxt.getLockId()) {
+                logger.fine("Removing lock");
+        		em.remove(lock);
+        	}
+        }
         em.flush();
     }
     
@@ -477,7 +478,7 @@ public class WorkflowServiceBean {
     	 */
         WorkflowContext newCtxt =new WorkflowContext( ctxt.getRequest(), 
                 em.merge(ctxt.getDataset()), ctxt.getNextVersionNumber(), 
-                ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLock());
+                ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLockId());
         return newCtxt;
     }
 
