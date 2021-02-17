@@ -162,11 +162,22 @@ public class WorkflowServiceBean {
      */
     @Asynchronous
     public void resume(PendingWorkflowInvocation pending, String body) {
-        em.remove(em.merge(pending));
-        em.flush();
+        removePending(pending);
         doResume(pending, body);
     }
     
+    // The workflow lock code has been releasing the lock at the end of the whole
+    // workflow, but the link with the pending object breaks that (as unlock tries
+    // to delete the lock in a separate transaction while resume only deletes the
+    // pending object at the end of it's transaction) - minimally we need to update
+    // pending to not reference the lock now, but should be OK to remove it as well
+    // (in this transaction).
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+    public void removePending(PendingWorkflowInvocation pending) {
+        pending.setLock(null);
+        em.remove(em.merge(pending));
+        em.flush();
+    }
     
     @Asynchronous
     private void forward(Workflow wf, WorkflowContext ctxt) {
