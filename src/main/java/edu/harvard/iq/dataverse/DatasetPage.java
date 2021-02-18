@@ -5481,8 +5481,8 @@ public class DatasetPage implements java.io.Serializable {
         this.fileAccessRequest = fileAccessRequest;
     }
 
-    public Map<String, CVM> getCVMConf() {
-        Map<String, CVM> cvmMap = new HashMap<>();
+    public Map<String, CVM> getCVMConf(){
+        Map <String, CVM> cvmMap = new HashMap<>();
         String cvmSetting = settingsService.getValueForKey(SettingsServiceBean.Key.CVMConf);
         if (cvmSetting == null || cvmSetting.isEmpty())
             return cvmMap;
@@ -5494,12 +5494,12 @@ public class DatasetPage implements java.io.Serializable {
             for (JsonObject jo : cvmConfJsonArray.getValuesAs(JsonObject.class)) {
                 JsonArray v = jo.getJsonArray("vocabs");
                 List<String> vs = new ArrayList<>();
-                for (JsonString elm : v.getValuesAs(JsonString.class)) {
+                for (JsonString elm: v.getValuesAs(JsonString.class)){
                     vs.add(elm.getString());
                 }
                 JsonArray k = jo.getJsonArray("vocab-codes");
                 List<String> ks = new ArrayList<>();
-                for (JsonString elm : k.getValuesAs(JsonString.class)) {
+                for (JsonString elm: k.getValuesAs(JsonString.class)){
                     ks.add(elm.getString());
                 }
                 String cvmLang = BundleUtil.getDefaultLocale().getLanguage();//default
@@ -5525,7 +5525,6 @@ public class DatasetPage implements java.io.Serializable {
         }
         return cvmMap;
     }
-
     public class CVM {
         String cvmUrl;
         String language;
@@ -5577,16 +5576,5 @@ public class DatasetPage implements java.io.Serializable {
         public String getMapQuery() {
             return mapQuery;
         }
-    }
-
-    /**
-     * Add Signposting
-     * @return
-     */
-    public String getSignpostingLinkHeader(){
-        if (!workingVersion.isReleased())
-            return "DRAFT";
-        SignpostingResources sr = new SignpostingResources(systemConfig, workingVersion, settingsService.getValueForKey(SettingsServiceBean.Key.SignpostingConf));
-        return sr.getLinks();
     }
 }
