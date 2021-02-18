@@ -55,9 +55,9 @@ public class MailUtil {
             case RETURNEDDS:
                 return BundleUtil.getStringFromBundle("notification.email.returned.dataset.subject", rootDvNameAsList);
             case WORKFLOW_SUCCESS:
-                return BundleUtil.getStringFromBundle("notification.email.workflow.success.dataset.subject", rootDvNameAsList);
+                return BundleUtil.getStringFromBundle("notification.email.workflow.success.subject", rootDvNameAsList);
             case WORKFLOW_FAILURE:
-                return BundleUtil.getStringFromBundle("notification.email.workflow.failure.dataset.subject", rootDvNameAsList);
+                return BundleUtil.getStringFromBundle("notification.email.workflow.failure.subject", rootDvNameAsList);
             case CREATEACC:
                 return BundleUtil.getStringFromBundle("notification.email.create.account.subject", rootDvNameAsList);
             case CHECKSUMFAIL:
