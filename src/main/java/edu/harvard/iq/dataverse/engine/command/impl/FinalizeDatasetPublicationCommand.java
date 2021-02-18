@@ -195,16 +195,16 @@ public class FinalizeDatasetPublicationCommand extends AbstractPublishDatasetCom
             }
         });
 
-        Dataset readyDataset = ctxt.em().merge(theDataset);
+        Dataset readyDataset = ctxt.em().merge(ds);
         
         // Finally, unlock the dataset (leaving any post-publish workflow lock in place)
-        ctxt.datasets().removeDatasetLocks(theDataset, DatasetLock.Reason.finalizePublication);
-        if ( theDataset.isLockedFor(DatasetLock.Reason.InReview) ) {
-            ctxt.datasets().removeDatasetLocks(theDataset, DatasetLock.Reason.InReview);
+        ctxt.datasets().removeDatasetLocks(readyDataset, DatasetLock.Reason.finalizePublication);
+        if (readyDataset.isLockedFor(DatasetLock.Reason.InReview) ) {
+            ctxt.datasets().removeDatasetLocks(readyDataset, DatasetLock.Reason.InReview);
         }
         
-        logger.info("Successfully published the dataset "+theDataset.getGlobalId().asString());
-
+        logger.info("Successfully published the dataset "+readyDataset.getGlobalId().asString());
+        readyDataset = ctxt.em().merge(readyDataset);
         
         return readyDataset;
     }

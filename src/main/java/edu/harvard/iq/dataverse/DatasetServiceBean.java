@@ -408,7 +408,9 @@ public class DatasetServiceBean implements java.io.Serializable {
         dataset.addLock(lock);
         lock.setStartTime( new Date() );
         em.persist(lock);
+        em.flush();
         //em.merge(dataset); 
+        logger.info("DSB lock: " + lock.getId() + " " + lock.getInfo());
         return lock;
     }
     
@@ -459,6 +461,7 @@ public class DatasetServiceBean implements java.io.Serializable {
                     .filter( l -> l.getReason() == aReason )
                     .forEach( lock -> {
                         lock = em.merge(lock);
+                        logger.info("DSB Removing lock: " + lock.getId());
                         dataset.removeLock(lock);
 
                         AuthenticatedUser user = lock.getUser();

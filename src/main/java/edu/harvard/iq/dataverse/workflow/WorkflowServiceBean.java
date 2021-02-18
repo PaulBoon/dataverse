@@ -296,8 +296,9 @@ public class WorkflowServiceBean {
          */
         datasetLock.setDataset(ctxt.getDataset());
         em.persist(datasetLock);
-        //flush creates the id
+        //flush sets the lock id
         em.flush();
+        logger.info("Created wf lock: " + datasetLock.getId());
         ctxt.setLockId(datasetLock.getId());
     }
     
@@ -314,8 +315,9 @@ public class WorkflowServiceBean {
         lockCounter.setParameter("datasetId", ctxt.getDataset().getId());
         List<DatasetLock> locks = lockCounter.getResultList();
         for(DatasetLock lock: locks) {
+            logger.info("Found lock: " + lock.getId());
         	if(lock.getReason() == DatasetLock.Reason.Workflow && lock.getId()==ctxt.getLockId()) {
-                logger.fine("Removing lock");
+                logger.fine("Removing lock: " + lock.getId());
         		em.remove(lock);
         	}
         }
@@ -358,8 +360,13 @@ public class WorkflowServiceBean {
                 info += validatePhysicalFiles ? "Validating Datafiles Asynchronously" : "";
                 lock.setInfo(info);
                 datasets.addDatasetLock(ctxt.getDataset(), lock);
+                DatasetLock wfLock =ctxt.getDataset().getLockFor(DatasetLock.Reason.Workflow); 
+                logger.info("Found wef lock: " + ((wfLock==null)? "No": wfLock.getId()));
+                DatasetLock fiLock =ctxt.getDataset().getLockFor(DatasetLock.Reason.finalizePublication); 
+                logger.info("Found final lock: " + ((fiLock==null)? "No": fiLock.getId()));
+                
                 unlockDataset(ctxt);
-                ctxt.setLock(null); //the workflow lock
+                ctxt.setLockId(null); //the workflow lock
                 //Refreshing merges the dataset
                 ctxt = refresh(ctxt);
                 //Then call Finalize

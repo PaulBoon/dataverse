@@ -96,6 +96,7 @@ public class PublishDatasetCommand extends AbstractPublishDatasetCommand<Publish
             WorkflowContext wfc = buildContext(theDataset, TriggerType.PrePublishDataset, datasetExternallyReleased);
             //add workflow lock before returning
             ctxt.workflows().lockDataset(wfc);
+            logger.info("LOck ID = " + wfc.getLockId());
             ctxt.workflows().start(prePubWf.get(), wfc);
             return new PublishDatasetResult(theDataset, Status.Workflow);
             
