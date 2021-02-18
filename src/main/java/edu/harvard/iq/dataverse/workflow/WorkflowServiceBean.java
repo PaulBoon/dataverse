@@ -194,7 +194,10 @@ public class WorkflowServiceBean {
             pauseAndAwait(wf, ctxt, (Pending) res, pending.getPendingStepIdx());
         } else {
             if (res instanceof Success) {
-            
+                userNotificationService.sendNotification(ctxt.getRequest().getAuthenticatedUser(), Timestamp.from(Instant.now()), UserNotification.Type.WORKFLOW_SUCCESS, ctxt.getDataset().getLatestVersion().getId(), ((Success) res).getMessage());
+                //UserNotification isn't meant to be a long-term record and doesn't store the comment, so we'll also keep it as a workflow comment
+                WorkflowComment wfc = new WorkflowComment(ctxt.getDataset().getLatestVersion(), WorkflowComment.Type.WORKFLOW_SUCCESS, ((Success) res).getMessage(), ctxt.getRequest().getAuthenticatedUser());
+                datasets.addWorkflowComment(wfc);
         }
             executeSteps(wf, ctxt, pending.getPendingStepIdx() + 1);
         }
