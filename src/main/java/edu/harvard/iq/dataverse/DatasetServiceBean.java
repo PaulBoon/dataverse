@@ -405,11 +405,8 @@ public class DatasetServiceBean implements java.io.Serializable {
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public DatasetLock addDatasetLock(Dataset dataset, DatasetLock lock) {
         lock.setDataset(dataset);
-        dataset.addLock(lock);
         lock.setStartTime( new Date() );
         em.persist(lock);
-        em.flush();
-        //em.merge(dataset); 
         logger.info("DSB lock: " + lock.getId() + " " + lock.getInfo());
         return lock;
     }
@@ -460,8 +457,9 @@ public class DatasetServiceBean implements java.io.Serializable {
             new HashSet<>(dataset.getLocks()).stream()
                     .filter( l -> l.getReason() == aReason )
                     .forEach( lock -> {
+                        logger.info("DSB Incoming lock: " + lock.getId() + " " + lock.getInfo());
                         lock = em.merge(lock);
-                        logger.info("DSB Removing lock: " + lock.getId());
+                        logger.info("DSB Removing lock: " + lock.getId() + " " + lock.getInfo());
                         dataset.removeLock(lock);
 
                         AuthenticatedUser user = lock.getUser();
