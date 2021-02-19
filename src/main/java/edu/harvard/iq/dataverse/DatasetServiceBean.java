@@ -405,6 +405,7 @@ public class DatasetServiceBean implements java.io.Serializable {
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public DatasetLock addDatasetLock(Dataset dataset, DatasetLock lock) {
         lock.setDataset(dataset);
+        dataset.addLock(lock);
         lock.setStartTime( new Date() );
         em.persist(lock);
         logger.info("DSB lock: " + lock.getId() + " " + lock.getInfo());
