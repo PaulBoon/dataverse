@@ -991,7 +991,7 @@ public class Datasets extends AbstractApiBean {
                  * 
                  */
                 if ((ds.getModificationTime()!=null && (ds.getIndexTime() == null || (ds.getIndexTime().compareTo(ds.getModificationTime()) <= 0))) ||
-                        (ds.getPermissionModificationTime()!=null && (ds.getIndexTime() == null || (ds.getIndexTime().compareTo(ds.getPermissionModificationTime()) <= 0)))) {
+                        (ds.getPermissionModificationTime()!=null && (ds.getPermissionIndexTime() == null || (ds.getPermissionIndexTime().compareTo(ds.getPermissionModificationTime()) <= 0)))) {
                     return error(Response.Status.CONFLICT, "Dataset is awaiting indexing");
                 }
             }
