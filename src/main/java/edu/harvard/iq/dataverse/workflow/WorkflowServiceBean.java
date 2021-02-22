@@ -107,6 +107,7 @@ public class WorkflowServiceBean {
      * @param ctxt the context in which the workflow is executed.
      * @throws CommandException If the dataset could not be locked.
      */
+    //ToDo - should this be @Async? or just the forward() method?
     @Asynchronous
     public void start(Workflow wf, WorkflowContext ctxt) throws CommandException {
         

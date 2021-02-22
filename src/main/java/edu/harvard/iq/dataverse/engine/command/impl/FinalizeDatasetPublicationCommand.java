@@ -183,10 +183,13 @@ public class FinalizeDatasetPublicationCommand extends AbstractPublishDatasetCom
         final Dataset ds = ctxt.em().merge(theDataset);
         //Remove any pre-pub workflow lock (not needed as WorkflowServiceBean.workflowComplete() should already have removed it after setting the finalizePublication lock?)
         ctxt.datasets().removeDatasetLocks(ds, DatasetLock.Reason.Workflow);
+        
+        //Should this be in onSuccess()?
         ctxt.workflows().getDefaultWorkflow(TriggerType.PostPublishDataset).ifPresent(wf -> {
             try {
                 ctxt.workflows().start(wf, buildContext(ds, TriggerType.PostPublishDataset, datasetExternallyReleased));
             } catch (CommandException ex) {
+                ctxt.datasets().removeDatasetLocks(ds, DatasetLock.Reason.Workflow);
                 logger.log(Level.SEVERE, "Error invoking post-publish workflow: " + ex.getMessage(), ex);
             }
         });
