@@ -109,6 +109,16 @@ public class WorkflowServiceBean {
      */
     @Asynchronous
     public void start(Workflow wf, WorkflowContext ctxt) throws CommandException {
+        
+        // Since we are calling this asynchronously anyway - sleep here 
+        // for a few seconds, just in case, to make sure the database update of 
+        // the dataset initiated by the PublishDatasetCommand has finished, 
+        // to avoid any concurrency/optimistic lock issues. 
+        try {
+            Thread.sleep(1000);
+        } catch (Exception ex) {
+            logger.warning("Failed to sleep for a second.");
+        }
         ctxt = refresh(ctxt, retrieveRequestedSettings( wf.getRequiredSettings()), getCurrentApiToken(ctxt.getRequest().getAuthenticatedUser()));
         lockDataset(ctxt, new DatasetLock(DatasetLock.Reason.Workflow, ctxt.getRequest().getAuthenticatedUser()));
         forward(wf, ctxt);
@@ -183,6 +193,11 @@ public class WorkflowServiceBean {
         final WorkflowContext ctxt = refresh(newCtxt,retrieveRequestedSettings( wf.getRequiredSettings()), getCurrentApiToken(newCtxt.getRequest().getAuthenticatedUser()));
         logger.info("After resume");
         logLocks(ctxt, ctxt.getDataset());
+        logger.fine("IT: " + ctxt.getDataset().getIndexTime());
+        logger.fine("MT: " + ctxt.getDataset().getModificationTime());
+        logger.fine("PIT: " + ctxt.getDataset().getPermissionIndexTime());
+        logger.fine("PMT: " + ctxt.getDataset().getPermissionModificationTime());
+
         WorkflowStepResult res = pendingStep.resume(ctxt, pending.getLocalData(), body);
         if (res instanceof Failure) {
             userNotificationService.sendNotification(ctxt.getRequest().getAuthenticatedUser(), Timestamp.from(Instant.now()), UserNotification.Type.WORKFLOW_FAILURE, ctxt.getDataset().getLatestVersion().getId(), ((Failure) res).getMessage());
