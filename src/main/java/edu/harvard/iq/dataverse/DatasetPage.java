@@ -5431,6 +5431,17 @@ public class DatasetPage implements Serializable {
         this.fileAccessRequest = fileAccessRequest;
     }
 
+    /**
+     * Add Signposting
+     * @return
+     */
+    public String getSignpostingLinkHeader(){
+        if (!workingVersion.isReleased())
+            return "DRAFT";
+        SignpostingResources sr = new SignpostingResources(systemConfig, workingVersion, settingsService.getValueForKey(SettingsServiceBean.Key.SignpostingConf));
+        return sr.getLinks();
+    }
+
     public Map<String, CVoc> getCVocConf(){
         Map <String, CVoc> cvocMap = new HashMap<>();
         String cvocSetting = settingsService.getValueForKey(SettingsServiceBean.Key.CVocConf);
