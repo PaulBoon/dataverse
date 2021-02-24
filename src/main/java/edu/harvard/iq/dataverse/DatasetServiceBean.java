@@ -408,7 +408,7 @@ public class DatasetServiceBean implements java.io.Serializable {
         dataset.addLock(lock);
         lock.setStartTime( new Date() );
         em.persist(lock);
-        //em.merge(dataset); 
+        logger.info("DSB lock: " + lock.getId() + " " + lock.getInfo());
         return lock;
     }
     
@@ -458,7 +458,9 @@ public class DatasetServiceBean implements java.io.Serializable {
             new HashSet<>(dataset.getLocks()).stream()
                     .filter( l -> l.getReason() == aReason )
                     .forEach( lock -> {
+                        logger.info("DSB Incoming lock: " + lock.getId() + " " + lock.getInfo());
                         lock = em.merge(lock);
+                        logger.info("DSB Removing lock: " + lock.getId() + " " + lock.getInfo());
                         dataset.removeLock(lock);
 
                         AuthenticatedUser user = lock.getUser();
@@ -786,6 +788,12 @@ public class DatasetServiceBean implements java.io.Serializable {
         em.persist(workflowComment);
         return workflowComment;
     }
+    
+    public void markWorkflowCommentAsRead(WorkflowComment workflowComment) {
+        workflowComment.setToBeShown(false);
+        em.merge(workflowComment);
+    }
+    
     
     /**
      * This method used to throw CommandException, which was pretty pointless 

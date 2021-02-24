@@ -69,6 +69,10 @@ public class PublishDatasetCommand extends AbstractPublishDatasetCommand<Publish
 
         Dataset theDataset = getDataset();
 
+        
+        //ToDo - any reason to set the version in publish versus finalize? Failure in a prepub workflow or finalize will leave draft versions with an assigned version number as is.
+        //Changing the dataset in this transaction also potentially makes a race condition with a prepub workflow, possibly resulting in an OptimisticLockException there.
+        
         // Set the version numbers:
 
         if (theDataset.getPublicationDate() == null) {
@@ -86,6 +90,7 @@ public class PublishDatasetCommand extends AbstractPublishDatasetCommand<Publish
             theDataset.getLatestVersion().setMinorVersionNumber(new Long(0));
         }
         
+        //ToDo - should this be in onSuccess()? May relate to todo above 
         Optional<Workflow> prePubWf = ctxt.workflows().getDefaultWorkflow(TriggerType.PrePublishDataset);
         if ( prePubWf.isPresent() ) {
             // We start a workflow
@@ -169,7 +174,8 @@ public class PublishDatasetCommand extends AbstractPublishDatasetCommand<Publish
         
         if ( (getDataset().isLockedFor(DatasetLock.Reason.Workflow)&&!ctxt.permissions().isMatchingWorkflowLock(getDataset(),request.getUser().getIdentifier(),request.getWFInvocationId())) 
                 || getDataset().isLockedFor(DatasetLock.Reason.Ingest) 
-                || getDataset().isLockedFor(DatasetLock.Reason.finalizePublication)) {
+                || getDataset().isLockedFor(DatasetLock.Reason.finalizePublication)
+                || getDataset().isLockedFor(DatasetLock.Reason.EditInProgress)) {
             throw new IllegalCommandException("This dataset is locked. Reason: " 
                     + getDataset().getLocks().stream().map(l -> l.getReason().name()).collect( joining(",") )
                     + ". Please try publishing later.", this);
