@@ -120,7 +120,7 @@ public class WorkflowServiceBean {
 //        } catch (Exception ex) {
 //            logger.warning("Failed to sleep for a second.");
 //        }
-        ctxt = refresh(ctxt, retrieveRequestedSettings( wf.getRequiredSettings()), getCurrentApiToken(ctxt.getRequest().getAuthenticatedUser()));
+        ctxt = refresh(ctxt, retrieveRequestedSettings( wf.getRequiredSettings()), getCurrentApiToken(ctxt.getRequest().getAuthenticatedUser()), true);
         lockDataset(ctxt, new DatasetLock(DatasetLock.Reason.Workflow, ctxt.getRequest().getAuthenticatedUser()));
         forward(wf, ctxt);
     }
@@ -542,10 +542,10 @@ public class WorkflowServiceBean {
     	 */
         WorkflowContext newCtxt;
         if (findDataset) {
-            newCtxt = new WorkflowContext(ctxt.getRequest(), datasets.find(ctxt.getDataset().getId()), ctxt.getNextVersionNumber(), ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLock());
+            newCtxt = new WorkflowContext(ctxt.getRequest(), datasets.find(ctxt.getDataset().getId()), ctxt.getNextVersionNumber(), ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLockId());
         }
         else {
-            newCtxt = new WorkflowContext(ctxt.getRequest(), em.merge(ctxt.getDataset()), ctxt.getNextVersionNumber(), ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLock());
+            newCtxt = new WorkflowContext(ctxt.getRequest(), em.merge(ctxt.getDataset()), ctxt.getNextVersionNumber(), ctxt.getNextMinorVersionNumber(), ctxt.getType(), settings, apiToken, ctxt.getDatasetExternallyReleased(), ctxt.getInvocationId(), ctxt.getLockId());
         }
         return newCtxt;
     }
