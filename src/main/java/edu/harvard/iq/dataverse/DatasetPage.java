@@ -5464,6 +5464,7 @@ public class DatasetPage implements Serializable {
                 int cvocMinChars = 0;
                 if (jo.containsKey("minChars") && jo.getInt("minChars") >= 0)
                     cvocMinChars = jo.getInt("minChars");
+                logger.fine("cvoc - minChars: " + cvocMinChars);
                 String cvocProtocol = "skosmos";//default
                 if (jo.containsKey("protocol"))
                     cvocProtocol = jo.getString("protocol");
@@ -5491,7 +5492,6 @@ public class DatasetPage implements Serializable {
                 CVoc cvoc = new CVoc(cvocUrl, cvocLang, cvocProtocol, cvocTermParentUri, cvocReadonly, cvocMinChars, vocabsList, vocabCodesList
                         , cvocJsUrl, cvocMapId, cvocMapQuery);
                 cvocMap.put(jo.getString("vocab-name"), cvoc);
-
             }
         }
         return cvocMap;
