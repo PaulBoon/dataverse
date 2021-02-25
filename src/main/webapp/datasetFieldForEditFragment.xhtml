@@ -81,7 +81,7 @@
                             cv = { 'cvocUrl' : cvocUrl, 'protocol': cvocProtocol, 'lang': cvocLang, 'termParentUri': termParentUri, 'selectedVocab': selectedVocab, 'term': request.term };
                         autointerface(request, response, cv, mapping);
                           },
-                          minLength: 1,
+                          minLength: #{cvoc.get(dsfv.datasetField.datasetFieldType.parentDatasetFieldType.name).getMinChars()},
                           select: function(event, ui) {
                                $.each(ui, function(i, v) {
                                $("#akmi_#{valCount.index+1}_#{cvoc.get(dsfv.datasetField.datasetFieldType.parentDatasetFieldType.name).getKeys()[2]}").find("input[name*='cv_url_']").val(v.id);

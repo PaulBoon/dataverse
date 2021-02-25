@@ -5461,6 +5461,9 @@ public class DatasetPage implements Serializable {
                 if (jo.containsKey("readonly") && jo.getString("readonly").toLowerCase().equals("true"))
                     cvocReadonly = true;
                 logger.fine("cvoc - readonly: " + cvocReadonly);
+                int cvocMinChars = 0;
+                if (jo.containsKey("minChars") && jo.getInt("minChars") >= 0)
+                    cvocMinChars = jo.getInt("minChars");
                 String cvocProtocol = "skosmos";//default
                 if (jo.containsKey("protocol"))
                     cvocProtocol = jo.getString("protocol");
@@ -5485,7 +5488,7 @@ public class DatasetPage implements Serializable {
                 if (jo.containsKey("cvoc-url"))
                     cvocUrl = jo.getString("cvoc-url");
                 logger.fine("cvoc - cvoc-url: " + cvocUrl);
-                CVoc cvoc = new CVoc(cvocUrl, cvocLang, cvocProtocol, cvocTermParentUri, cvocReadonly, vocabsList, vocabCodesList
+                CVoc cvoc = new CVoc(cvocUrl, cvocLang, cvocProtocol, cvocTermParentUri, cvocReadonly, cvocMinChars, vocabsList, vocabCodesList
                         , cvocJsUrl, cvocMapId, cvocMapQuery);
                 cvocMap.put(jo.getString("vocab-name"), cvoc);
 
@@ -5502,14 +5505,16 @@ public class DatasetPage implements Serializable {
         String mapId;
         String mapQuery;
         boolean readonly;
+        int minChars;
         List<String> vocabs;
         List<String> keys;
-        public CVoc(String cvocUrl, String language, String protocol, String termParentUri, boolean readonly,
+        public CVoc(String cvocUrl, String language, String protocol, String termParentUri, boolean readonly, int minChars,
                     List<String> vocabs, List<String> keys, String jsUrl, String mapId, String mapQuery){
             this.cvocUrl = cvocUrl;
             this.language = language;
             this.protocol = protocol;
             this.readonly = readonly;
+            this.minChars = minChars;
             this.vocabs = vocabs;
             this.termParentUri = termParentUri;
             this.keys = keys;
@@ -5531,6 +5536,7 @@ public class DatasetPage implements Serializable {
         public boolean isReadonly() {
             return readonly;
         }
+        public int getMinChars() { return minChars; }
         public List<String> getVocabs() {
             return vocabs;
         }
