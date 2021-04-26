@@ -1264,7 +1264,7 @@ public class Datasets extends AbstractApiBean {
              * be applied to the code there as well.
              */
             String errorMsg = null;
-            String successMsg = null;
+            String successMsg = ""; // Quick fix for NPE that results from going throught the pre-publish WF branch below
             try {
                 // ToDo - should this be in onSuccess()? May relate to todo above
                 Optional<Workflow> prePubWf = wfService.getDefaultWorkflow(TriggerType.PrePublishDataset);
