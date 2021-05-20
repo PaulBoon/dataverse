@@ -38,7 +38,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("dataverses")
     public Response getDataversesAllTime(@Context UriInfo uriInfo) {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias,"dataverses");
         try {
@@ -52,9 +52,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -62,7 +62,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("dataverses/addedOverTime")
     public Response getDataversesAddedOverTime(@Context UriInfo uriInfo) {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias,"dataverses/addedOverTime");
         logger.fine(metricName);
@@ -74,9 +74,9 @@ public class MetricsDans extends AbstractApiBean {
                     jsonArrayString = jsonArrayBuilder.build().toString();
                     metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
                 }
-                return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+                return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
             } catch (Exception ex) {
-                return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+                return (error(BAD_REQUEST, ex.getLocalizedMessage()));
             }
     }
 
@@ -84,7 +84,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("dataverses/byCategory")
     public Response getDataversesByCategory() {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias,"dataverses/byCategory");
         try {
@@ -94,9 +94,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -105,7 +105,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("datasets")
     public Response countDatasets(@Context UriInfo uriInfo) {
             if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias, "datasets");
         try {
@@ -131,9 +131,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -141,7 +141,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("datasets/bySubject")
     public Response getDatasetsBySubject() {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias,"datasets/bySubject");
         try {
@@ -151,9 +151,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName, null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -161,7 +161,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("datasets/addedOverTime")
     public Response getDatasetsAddedOverTime(@Context UriInfo uriInfo) {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias,"datasets/addedOverTime");
         try {
@@ -171,9 +171,9 @@ public class MetricsDans extends AbstractApiBean {
                     jsonArrayString = jsonArrayBuilder.build().toString();
                     metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
                 }
-                return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+                return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
             } catch (Exception ex) {
-                return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+                return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -181,7 +181,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("files")
     public Response getFilesAllYears(@Context UriInfo uriInfo) {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias, "files");
         try {
@@ -191,9 +191,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName, null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -201,7 +201,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("tree")
     public Response getDataversesTree(@Context UriInfo uriInfo) {
         if (!isDvAliasExist(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias, "tree");
         try {
@@ -212,9 +212,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = job.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonObjectBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonObjectBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -222,7 +222,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("dataverses-report")
     public Response getDataversesReport(@Context UriInfo uriInfo) {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias, "dataverses-report");
         try {
@@ -252,9 +252,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -262,7 +262,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("datasets-report")
     public Response getDatasetsReport(@Context UriInfo uriInfo) {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias, "datasets-report");
         try {
@@ -291,9 +291,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
@@ -301,7 +301,7 @@ public class MetricsDans extends AbstractApiBean {
     @Path("downloads")
     public Response getDownloadsAllTime() {
         if (!isTopLevelDvAlias(topLevelDvAlias))
-            return allowCors(error(BAD_REQUEST, "Not found"));
+            return (error(BAD_REQUEST, "Not found"));
 
         String metricName = createMetricName(topLevelDvAlias, "downloads");
         try {
@@ -311,9 +311,9 @@ public class MetricsDans extends AbstractApiBean {
                 jsonArrayString = jsonArrayBuilder.build().toString();
                 metricsSvc.save(new Metric(metricName + "_" + metricsSvc.getTodayAsString(), null, null, jsonArrayString));
             }
-            return allowCors(ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
+            return (ok(MetricsUtil.stringToJsonArrayBuilder(jsonArrayString)));
         } catch (Exception ex) {
-            return allowCors(error(BAD_REQUEST, ex.getLocalizedMessage()));
+            return (error(BAD_REQUEST, ex.getLocalizedMessage()));
         }
     }
 
