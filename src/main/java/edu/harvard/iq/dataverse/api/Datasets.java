@@ -17,6 +17,7 @@ import edu.harvard.iq.dataverse.DataverseServiceBean;
 import edu.harvard.iq.dataverse.DataverseSession;
 import edu.harvard.iq.dataverse.DvObject;
 import edu.harvard.iq.dataverse.EjbDataverseEngine;
+import edu.harvard.iq.dataverse.LicenseServiceBean;
 import edu.harvard.iq.dataverse.MetadataBlock;
 import edu.harvard.iq.dataverse.MetadataBlockServiceBean;
 import edu.harvard.iq.dataverse.PermissionServiceBean;
@@ -199,7 +200,7 @@ public class Datasets extends AbstractApiBean {
     
     @EJB
     DDIExportServiceBean ddiExportService;
-    
+
     @EJB
     MetadataBlockServiceBean metadataBlockService;
     
@@ -233,9 +234,12 @@ public class Datasets extends AbstractApiBean {
     
     @Inject
     DataverseRequestServiceBean dvRequestService;
-    
+
     @Inject
     WorkflowServiceBean wfService;
+
+    @Inject
+    LicenseServiceBean licenseServiceBean;
 
     /**
      * Used to consolidate the way we parse and handle dataset versions.
@@ -663,7 +667,7 @@ public class Datasets extends AbstractApiBean {
             
         }
     }
-  
+
     @GET
     @Path("{id}/versions/{versionId}/metadata")
     @Produces("application/json-ld")
@@ -691,7 +695,7 @@ public class Datasets extends AbstractApiBean {
     public Response getVersionJsonLDMetadata(@PathParam("id") String id, @Context UriInfo uriInfo, @Context HttpHeaders headers) {
         return getVersionJsonLDMetadata(id, ":draft", uriInfo, headers);
     }
-            
+
     @PUT
     @Path("{id}/metadata")
     @Consumes("application/json-ld")
@@ -703,7 +707,7 @@ public class Datasets extends AbstractApiBean {
             DatasetVersion dsv = ds.getEditVersion();
             boolean updateDraft = ds.getLatestVersion().isDraft();
             dsv = JSONLDUtil.updateDatasetVersionMDFromJsonLD(dsv, jsonLDBody, metadataBlockService, datasetFieldSvc, !replaceTerms, false);
-            
+
             DatasetVersion managedVersion;
             if (updateDraft) {
                 Dataset managedDataset = execCommand(new UpdateDatasetVersionCommand(ds, req));
@@ -721,7 +725,7 @@ public class Datasets extends AbstractApiBean {
             return error(Status.BAD_REQUEST, "Error parsing Json: " + jpe.getMessage());
         }
     }
-    
+
     @PUT
     @Path("{id}/metadata/delete")
     @Consumes("application/json-ld")
@@ -1203,7 +1207,7 @@ public class Datasets extends AbstractApiBean {
             return ex.getResponse();
         }
     }
-    
+
     @POST
     @Path("{id}/actions/:releasemigrated")
     @Consumes("application/json-ld")
@@ -1234,7 +1238,7 @@ public class Datasets extends AbstractApiBean {
                         // First Release
                         ds.getLatestVersion().setVersionNumber(Long.valueOf(1));
                         ds.getLatestVersion().setMinorVersionNumber(Long.valueOf(0));
-                        //Also set publication date if this is the first 
+                        //Also set publication date if this is the first
                         if(dateTime != null) {
                           ds.setPublicationDate(Timestamp.valueOf(dateTime));
                         }
@@ -1251,7 +1255,7 @@ public class Datasets extends AbstractApiBean {
                         ds.getLatestVersion().setVersionNumber(Long.valueOf(ds.getVersionNumber() + 1));
                         ds.getLatestVersion().setMinorVersionNumber(Long.valueOf(0));
                     }
-                    
+
                 }
             } catch (Exception e) {
                 logger.fine(e.getMessage());
@@ -1285,7 +1289,7 @@ public class Datasets extends AbstractApiBean {
                 errorMsg = BundleUtil.getStringFromBundle("datasetversion.update.failure") + " - " + ex.toString();
                 logger.severe(ex.getMessage());
             }
-            
+
             if (errorMsg != null) {
                 return error(Response.Status.INTERNAL_SERVER_ERROR, errorMsg);
             } else {
@@ -1300,7 +1304,7 @@ public class Datasets extends AbstractApiBean {
             return ex.getResponse();
         }
     }
-    
+
     @POST
     @Path("{id}/move/{targetDataverseAlias}")
     public Response moveDataset(@PathParam("id") String id, @PathParam("targetDataverseAlias") String targetDataverseAlias, @QueryParam("forceMove") Boolean force) {
@@ -2083,7 +2087,8 @@ public Response completeMPUpload(String partETagBody, @QueryParam("globalid") St
                                                 fileService,
                                                 permissionSvc,
                                                 commandEngine,
-                                                systemConfig);
+                                                systemConfig,
+                                                licenseServiceBean);
 
 
         //-------------------
