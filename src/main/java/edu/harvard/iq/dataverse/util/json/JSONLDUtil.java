@@ -72,51 +72,51 @@ public class JSONLDUtil {
         return contextBuilder.build();
     }
 
-    public static Dataset updateDatasetMDFromJsonLD(Dataset ds, String jsonLDBody,
-            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc, boolean append, boolean migrating) {
+//    public static Dataset updateDatasetMDFromJsonLD(Dataset ds, String jsonLDBody,
+//            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc, boolean append, boolean migrating) {
+//
+//        DatasetVersion dsv = new DatasetVersion();
+//
+//        JsonObject jsonld = decontextualizeJsonLD(jsonLDBody);
+//        if(migrating) {
+//        Optional<GlobalId> maybePid = GlobalId.parse(jsonld.getString("@id"));
+//          if (maybePid.isPresent()) {
+//            ds.setGlobalId(maybePid.get());
+//          } else {
+//            // unparsable PID passed. Terminate.
+//            throw new BadRequestException("Cannot parse the @id '" + jsonld.getString("@id")
+//                    + "'. Make sure it is in valid form - see Dataverse Native API documentation.");
+//          }
+//        }
+//
+//        dsv = updateDatasetVersionMDFromJsonLD(dsv, jsonld, metadataBlockSvc, datasetFieldSvc, append, migrating);
+//        dsv.setDataset(ds);
+//
+//        List<DatasetVersion> versions = new ArrayList<>(1);
+//        versions.add(dsv);
+//
+//        ds.setVersions(versions);
+//        if (migrating) {
+//            if (jsonld.containsKey(JsonLDTerm.schemaOrg("dateModified").getUrl())) {
+//                String dateString = jsonld.getString(JsonLDTerm.schemaOrg("dateModified").getUrl());
+//                LocalDateTime dateTime = getDateTimeFrom(dateString);
+//                ds.setModificationTime(Timestamp.valueOf(dateTime));
+//            }
+//            try {
+//                logger.fine("Output dsv: " + new OREMap(dsv, false).getOREMap().toString());
+//            } catch (Exception e) {
+//                // TODO Auto-generated catch block
+//                e.printStackTrace();
+//            }
+//        }
+//        return ds;
+//    }
 
-        DatasetVersion dsv = new DatasetVersion();
-
-        JsonObject jsonld = decontextualizeJsonLD(jsonLDBody);
-        if(migrating) {
-        Optional<GlobalId> maybePid = GlobalId.parse(jsonld.getString("@id"));
-          if (maybePid.isPresent()) {
-            ds.setGlobalId(maybePid.get());
-          } else {
-            // unparsable PID passed. Terminate.
-            throw new BadRequestException("Cannot parse the @id '" + jsonld.getString("@id")
-                    + "'. Make sure it is in valid form - see Dataverse Native API documentation.");
-          }
-        }
-
-        dsv = updateDatasetVersionMDFromJsonLD(dsv, jsonld, metadataBlockSvc, datasetFieldSvc, append, migrating);
-        dsv.setDataset(ds);
-
-        List<DatasetVersion> versions = new ArrayList<>(1);
-        versions.add(dsv);
-
-        ds.setVersions(versions);
-        if (migrating) {
-            if (jsonld.containsKey(JsonLDTerm.schemaOrg("dateModified").getUrl())) {
-                String dateString = jsonld.getString(JsonLDTerm.schemaOrg("dateModified").getUrl());
-                LocalDateTime dateTime = getDateTimeFrom(dateString);
-                ds.setModificationTime(Timestamp.valueOf(dateTime));
-            }
-            try {
-                logger.fine("Output dsv: " + new OREMap(dsv, false).getOREMap().toString());
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        return ds;
-    }
-
-    public static DatasetVersion updateDatasetVersionMDFromJsonLD(DatasetVersion dsv, String jsonLDBody,
-            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc, boolean append, boolean migrating) {
-        JsonObject jsonld = decontextualizeJsonLD(jsonLDBody);
-        return updateDatasetVersionMDFromJsonLD(dsv, jsonld, metadataBlockSvc, datasetFieldSvc, append, migrating);
-    }
+//    public static DatasetVersion updateDatasetVersionMDFromJsonLD(DatasetVersion dsv, String jsonLDBody,
+//            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc, boolean append, boolean migrating) {
+//        JsonObject jsonld = decontextualizeJsonLD(jsonLDBody);
+//        return updateDatasetVersionMDFromJsonLD(dsv, jsonld, metadataBlockSvc, datasetFieldSvc, append, migrating);
+//    }
 
     /**
      * 
@@ -130,155 +130,155 @@ public class JSONLDUtil {
      *                         value(s) for fields found in the json-ld.
      * @return
      */
-    public static DatasetVersion updateDatasetVersionMDFromJsonLD(DatasetVersion dsv, JsonObject jsonld,
-            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc, boolean append, boolean migrating) {
-
-        populateFieldTypeMap(metadataBlockSvc);
-
-        // get existing ones?
-        List<DatasetField> dsfl = dsv.getDatasetFields();
-        Map<DatasetFieldType, DatasetField> fieldByTypeMap = new HashMap<DatasetFieldType, DatasetField>();
-        for (DatasetField dsf : dsfl) {
-            if (fieldByTypeMap.containsKey(dsf.getDatasetFieldType())) {
-                // May have multiple values per field, but not multiple fields of one type?
-                logger.warning("Multiple fields of type " + dsf.getDatasetFieldType().getName());
-            }
-            fieldByTypeMap.put(dsf.getDatasetFieldType(), dsf);
-        }
-        
-        TermsOfUseAndAccess terms = (dsv.getTermsOfUseAndAccess()!=null) ? dsv.getTermsOfUseAndAccess().copyTermsOfUseAndAccess() : new TermsOfUseAndAccess();
-
-        for (String key : jsonld.keySet()) {
-            if (!key.equals("@context")) {
-                if (dsftMap.containsKey(key)) {
-
-                    DatasetFieldType dsft = dsftMap.get(key);
-                    DatasetField dsf = null;
-                    if (fieldByTypeMap.containsKey(dsft)) {
-                        dsf = fieldByTypeMap.get(dsft);
-                        // If there's an existing field, we use it with append and remove it for !append
-                        // unless it's multiple
-                        if (!append && !dsft.isAllowMultiples()) {
-                            dsfl.remove(dsf);
-                            dsf=null;
-                        }
-                    }
-                    if (dsf == null) {
-                        dsf = new DatasetField();
-                        dsfl.add(dsf);
-                        dsf.setDatasetFieldType(dsft);
-                    }
-
-                    // Todo - normalize object vs. array
-                    JsonArray valArray = getValues(jsonld.get(key), dsft.isAllowMultiples(), dsft.getName());
-
-                    addField(dsf, valArray, dsft, datasetFieldSvc, append);
-
-                } else {
-                    //When migrating, the publication date and version number can be set
-                    if (key.equals(JsonLDTerm.schemaOrg("datePublished").getUrl())&& migrating && !append) {
-                        dsv.setVersionState(VersionState.RELEASED);
-                    } else if (key.equals(JsonLDTerm.schemaOrg("version").getUrl())&& migrating && !append) {
-                        String friendlyVersion = jsonld.getString(JsonLDTerm.schemaOrg("version").getUrl());
-                        int index = friendlyVersion.indexOf(".");
-                        if (index > 0) {
-                            dsv.setVersionNumber(Long.parseLong(friendlyVersion.substring(0, index)));
-                            dsv.setMinorVersionNumber(Long.parseLong(friendlyVersion.substring(index + 1)));
-                        }
-                    } else if (key.equals(JsonLDTerm.schemaOrg("license").getUrl())) {
-                        //Special handling for license
-                        if (!append || !isSet(terms, key)) {
-                            // Mirror rules from SwordServiceBean
-                            if (jsonld.containsKey(JsonLDTerm.termsOfUse.getUrl())) {
-                                throw new BadRequestException(
-                                        "Cannot specify " + JsonLDTerm.schemaOrg("license").getUrl() + " and "
-                                                + JsonLDTerm.termsOfUse.getUrl());
-                            }
-                            setSemTerm(terms, key, TermsOfUseAndAccess.defaultLicense);
-                        } else {
-                            throw new BadRequestException(
-                                    "Can't append to a single-value field that already has a value: "
-                                            + JsonLDTerm.schemaOrg("license").getUrl());
-                        }
-
-                    } else if (datasetTerms.contains(key)) {
-                        // Other Dataset-level TermsOfUseAndAccess
-                        if (!append || !isSet(terms, key)) {
-                            setSemTerm(terms, key, jsonld.getString(key));
-                        } else {
-                            throw new BadRequestException(
-                                    "Can't append to a single-value field that already has a value: " + key);
-                        }
-                    } else if (key.equals(JsonLDTerm.fileTermsOfAccess.getUrl())) {
-                        // Other DataFile-level TermsOfUseAndAccess
-                        JsonObject fAccessObject = jsonld.getJsonObject(JsonLDTerm.fileTermsOfAccess.getUrl());
-                        for (String fileKey : fAccessObject.keySet()) {
-                            if (datafileTerms.contains(fileKey)) {
-                                if (!append || !isSet(terms, fileKey)) {
-                                    if (fileKey.equals(JsonLDTerm.fileRequestAccess.getUrl())) {
-                                        setSemTerm(terms, fileKey, fAccessObject.getBoolean(fileKey));
-                                    } else {
-                                        setSemTerm(terms, fileKey, fAccessObject.getString(fileKey));
-                                    }
-                                } else {
-                                    throw new BadRequestException(
-                                            "Can't append to a single-value field that already has a value: "
-                                                    + fileKey);
-                                }
-                            }
-                        }
-                    } else {
-                        //Metadata block metadata fields
-                        if (dsftMap.containsKey(JsonLDTerm.metadataOnOrig.getUrl())) {
-                            DatasetFieldType dsft = dsftMap.get(JsonLDTerm.metadataOnOrig.getUrl());
-
-                            DatasetField dsf = null;
-                            if (fieldByTypeMap.containsKey(dsft)) {
-                                dsf = fieldByTypeMap.get(dsft);
-                                // If there's an existing field, we use it with append and remove it for !append
-                                // (except if multiple, which is not the default)
-                                if (!append && !dsft.isAllowMultiples()) {
-                                    dsfl.remove(dsf);
-                                }
-                            }
-                            if (dsf == null) {
-                                dsf = new DatasetField();
-                                dsfl.add(dsf);
-                                dsf.setDatasetFieldType(dsft);
-                            }
-
-                            List<DatasetFieldValue> vals = dsf.getDatasetFieldValues();
-
-                            JsonObject currentValue = null;
-                            DatasetFieldValue datasetFieldValue = null;
-                            if (vals.isEmpty()) {
-                                datasetFieldValue = new DatasetFieldValue();
-                                vals.add(datasetFieldValue);
-                                datasetFieldValue.setDatasetField(dsf);
-                                dsf.setDatasetFieldValues(vals);
-
-                                currentValue = Json.createObjectBuilder().build();
-                            } else {
-                                datasetFieldValue = vals.get(0);
-                                JsonObject currentVal = decontextualizeJsonLD(datasetFieldValue.getValueForEdit());
-
-                            }
-                            currentValue.put(key, jsonld.get(key));
-                            JsonObject newValue = recontextualizeJsonLD(currentValue, metadataBlockSvc);
-                            datasetFieldValue.setValue(prettyPrint(newValue));
-                        }
-                    }
-                    dsv.setTermsOfUseAndAccess(terms);
-                    // ToDo: support Dataverse location metadata? e.g. move to new dataverse?
-                    // re: JsonLDTerm.schemaOrg("includedInDataCatalog")
-                }
-            }
-        }
-
-        dsv.setDatasetFields(dsfl);
-
-        return dsv;
-    }
+//    public static DatasetVersion updateDatasetVersionMDFromJsonLD(DatasetVersion dsv, JsonObject jsonld,
+//            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc, boolean append, boolean migrating) {
+//
+//        populateFieldTypeMap(metadataBlockSvc);
+//
+//        // get existing ones?
+//        List<DatasetField> dsfl = dsv.getDatasetFields();
+//        Map<DatasetFieldType, DatasetField> fieldByTypeMap = new HashMap<DatasetFieldType, DatasetField>();
+//        for (DatasetField dsf : dsfl) {
+//            if (fieldByTypeMap.containsKey(dsf.getDatasetFieldType())) {
+//                // May have multiple values per field, but not multiple fields of one type?
+//                logger.warning("Multiple fields of type " + dsf.getDatasetFieldType().getName());
+//            }
+//            fieldByTypeMap.put(dsf.getDatasetFieldType(), dsf);
+//        }
+//
+//        TermsOfUseAndAccess terms = (dsv.getTermsOfUseAndAccess()!=null) ? dsv.getTermsOfUseAndAccess().copyTermsOfUseAndAccess() : new TermsOfUseAndAccess();
+//
+//        for (String key : jsonld.keySet()) {
+//            if (!key.equals("@context")) {
+//                if (dsftMap.containsKey(key)) {
+//
+//                    DatasetFieldType dsft = dsftMap.get(key);
+//                    DatasetField dsf = null;
+//                    if (fieldByTypeMap.containsKey(dsft)) {
+//                        dsf = fieldByTypeMap.get(dsft);
+//                        // If there's an existing field, we use it with append and remove it for !append
+//                        // unless it's multiple
+//                        if (!append && !dsft.isAllowMultiples()) {
+//                            dsfl.remove(dsf);
+//                            dsf=null;
+//                        }
+//                    }
+//                    if (dsf == null) {
+//                        dsf = new DatasetField();
+//                        dsfl.add(dsf);
+//                        dsf.setDatasetFieldType(dsft);
+//                    }
+//
+//                    // Todo - normalize object vs. array
+//                    JsonArray valArray = getValues(jsonld.get(key), dsft.isAllowMultiples(), dsft.getName());
+//
+//                    addField(dsf, valArray, dsft, datasetFieldSvc, append);
+//
+//                } else {
+//                    //When migrating, the publication date and version number can be set
+//                    if (key.equals(JsonLDTerm.schemaOrg("datePublished").getUrl())&& migrating && !append) {
+//                        dsv.setVersionState(VersionState.RELEASED);
+//                    } else if (key.equals(JsonLDTerm.schemaOrg("version").getUrl())&& migrating && !append) {
+//                        String friendlyVersion = jsonld.getString(JsonLDTerm.schemaOrg("version").getUrl());
+//                        int index = friendlyVersion.indexOf(".");
+//                        if (index > 0) {
+//                            dsv.setVersionNumber(Long.parseLong(friendlyVersion.substring(0, index)));
+//                            dsv.setMinorVersionNumber(Long.parseLong(friendlyVersion.substring(index + 1)));
+//                        }
+//                    } else if (key.equals(JsonLDTerm.schemaOrg("license").getUrl())) {
+//                        //Special handling for license
+//                        if (!append || !isSet(terms, key)) {
+//                            // Mirror rules from SwordServiceBean
+//                            if (jsonld.containsKey(JsonLDTerm.termsOfUse.getUrl())) {
+//                                throw new BadRequestException(
+//                                        "Cannot specify " + JsonLDTerm.schemaOrg("license").getUrl() + " and "
+//                                                + JsonLDTerm.termsOfUse.getUrl());
+//                            }
+//                            setSemTerm(terms, key, TermsOfUseAndAccess.defaultLicense);
+//                        } else {
+//                            throw new BadRequestException(
+//                                    "Can't append to a single-value field that already has a value: "
+//                                            + JsonLDTerm.schemaOrg("license").getUrl());
+//                        }
+//
+//                    } else if (datasetTerms.contains(key)) {
+//                        // Other Dataset-level TermsOfUseAndAccess
+//                        if (!append || !isSet(terms, key)) {
+//                            setSemTerm(terms, key, jsonld.getString(key));
+//                        } else {
+//                            throw new BadRequestException(
+//                                    "Can't append to a single-value field that already has a value: " + key);
+//                        }
+//                    } else if (key.equals(JsonLDTerm.fileTermsOfAccess.getUrl())) {
+//                        // Other DataFile-level TermsOfUseAndAccess
+//                        JsonObject fAccessObject = jsonld.getJsonObject(JsonLDTerm.fileTermsOfAccess.getUrl());
+//                        for (String fileKey : fAccessObject.keySet()) {
+//                            if (datafileTerms.contains(fileKey)) {
+//                                if (!append || !isSet(terms, fileKey)) {
+//                                    if (fileKey.equals(JsonLDTerm.fileRequestAccess.getUrl())) {
+//                                        setSemTerm(terms, fileKey, fAccessObject.getBoolean(fileKey));
+//                                    } else {
+//                                        setSemTerm(terms, fileKey, fAccessObject.getString(fileKey));
+//                                    }
+//                                } else {
+//                                    throw new BadRequestException(
+//                                            "Can't append to a single-value field that already has a value: "
+//                                                    + fileKey);
+//                                }
+//                            }
+//                        }
+//                    } else {
+//                        //Metadata block metadata fields
+//                        if (dsftMap.containsKey(JsonLDTerm.metadataOnOrig.getUrl())) {
+//                            DatasetFieldType dsft = dsftMap.get(JsonLDTerm.metadataOnOrig.getUrl());
+//
+//                            DatasetField dsf = null;
+//                            if (fieldByTypeMap.containsKey(dsft)) {
+//                                dsf = fieldByTypeMap.get(dsft);
+//                                // If there's an existing field, we use it with append and remove it for !append
+//                                // (except if multiple, which is not the default)
+//                                if (!append && !dsft.isAllowMultiples()) {
+//                                    dsfl.remove(dsf);
+//                                }
+//                            }
+//                            if (dsf == null) {
+//                                dsf = new DatasetField();
+//                                dsfl.add(dsf);
+//                                dsf.setDatasetFieldType(dsft);
+//                            }
+//
+//                            List<DatasetFieldValue> vals = dsf.getDatasetFieldValues();
+//
+//                            JsonObject currentValue = null;
+//                            DatasetFieldValue datasetFieldValue = null;
+//                            if (vals.isEmpty()) {
+//                                datasetFieldValue = new DatasetFieldValue();
+//                                vals.add(datasetFieldValue);
+//                                datasetFieldValue.setDatasetField(dsf);
+//                                dsf.setDatasetFieldValues(vals);
+//
+//                                currentValue = Json.createObjectBuilder().build();
+//                            } else {
+//                                datasetFieldValue = vals.get(0);
+//                                JsonObject currentVal = decontextualizeJsonLD(datasetFieldValue.getValueForEdit());
+//
+//                            }
+//                            currentValue.put(key, jsonld.get(key));
+//                            JsonObject newValue = recontextualizeJsonLD(currentValue, metadataBlockSvc);
+//                            datasetFieldValue.setValue(prettyPrint(newValue));
+//                        }
+//                    }
+//                    dsv.setTermsOfUseAndAccess(terms);
+//                    // ToDo: support Dataverse location metadata? e.g. move to new dataverse?
+//                    // re: JsonLDTerm.schemaOrg("includedInDataCatalog")
+//                }
+//            }
+//        }
+//
+//        dsv.setDatasetFields(dsfl);
+//
+//        return dsv;
+//    }
     /**
      * 
      * @param dsv
@@ -289,89 +289,89 @@ public class JSONLDUtil {
      * @param c
      * @return
      */
-    public static DatasetVersion deleteDatasetVersionMDFromJsonLD(DatasetVersion dsv, String jsonLDBody,
-            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc) {
-        logger.fine("deleteDatasetVersionMD");
-        JsonObject jsonld = decontextualizeJsonLD(jsonLDBody);
-        //All terms are now URIs
-        //Setup dsftMap - URI to datasetFieldType map
-        populateFieldTypeMap(metadataBlockSvc);
-
-
-        //Another map - from datasetFieldType to an existing field in the dataset
-        List<DatasetField> dsfl = dsv.getDatasetFields();
-        Map<DatasetFieldType, DatasetField> fieldByTypeMap = new HashMap<DatasetFieldType, DatasetField>();
-        for (DatasetField dsf : dsfl) {
-            if (fieldByTypeMap.containsKey(dsf.getDatasetFieldType())) {
-                // May have multiple values per field, but not multiple fields of one type?
-                logger.warning("Multiple fields of type " + dsf.getDatasetFieldType().getName());
-            }
-            fieldByTypeMap.put(dsf.getDatasetFieldType(), dsf);
-        }
-        
-        TermsOfUseAndAccess terms = dsv.getTermsOfUseAndAccess().copyTermsOfUseAndAccess();
-
-        //Iterate through input json
-        for (String key : jsonld.keySet()) {
-            //Skip context (shouldn't be present with decontextualize used above)
-            if (!key.equals("@context")) {
-                if (dsftMap.containsKey(key)) {
-                    //THere's a field type with theis URI
-                    DatasetFieldType dsft = dsftMap.get(key);
-                    DatasetField dsf = null;
-                    if (fieldByTypeMap.containsKey(dsft)) {
-                        //There's a field of this type
-                        dsf = fieldByTypeMap.get(dsft);
-
-                        // Todo - normalize object vs. array
-                        JsonArray valArray = getValues(jsonld.get(key), dsft.isAllowMultiples(), dsft.getName());
-                        logger.fine("Deleting: " + key + " : " + valArray.toString());
-                        DatasetField dsf2 = getReplacementField(dsf, valArray);
-                        if(dsf2 == null) {
-                            //Exact match - remove the field
-                            dsfl.remove(dsf);
-                        } else {
-                            //Partial match - some values of a multivalue field match, so keep the remaining values
-                            dsfl.remove(dsf);
-                            dsfl.add(dsf2);
-                        }
-                    }
-                } else {
-                    // Internal/non-metadatablock terms
-                    if (key.equals(JsonLDTerm.schemaOrg("license").getUrl())) {
-                        if(jsonld.getString(key).equals(TermsOfUseAndAccess.CC0_URI)) {
-                            setSemTerm(terms, key, TermsOfUseAndAccess.License.NONE);
-                        } else {
-                            throw new BadRequestException(
-                                    "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
-                        }
-                    } else if (datasetTerms.contains(key)) {
-                        if(!deleteIfSemTermMatches(terms, key, jsonld.get(key))) {
-                            throw new BadRequestException(
-                                    "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
-                        }
-                    } else if (key.equals(JsonLDTerm.fileTermsOfAccess.getUrl())) {
-                        JsonObject fAccessObject = jsonld.getJsonObject(JsonLDTerm.fileTermsOfAccess.getUrl());
-                        for (String fileKey : fAccessObject.keySet()) {
-                            if (datafileTerms.contains(fileKey)) {
-                                if(!deleteIfSemTermMatches(terms, key, jsonld.get(key))) {
-                                    throw new BadRequestException(
-                                            "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
-                                }
-                            }
-                        }
-                    } else {
-                        throw new BadRequestException(
-                                "Term: " + key + " not found.");
-                                    }
-                    
-                    dsv.setTermsOfUseAndAccess(terms);
-                }
-            }
-        }
-        dsv.setDatasetFields(dsfl);
-        return dsv;
-    }
+//    public static DatasetVersion deleteDatasetVersionMDFromJsonLD(DatasetVersion dsv, String jsonLDBody,
+//            MetadataBlockServiceBean metadataBlockSvc, DatasetFieldServiceBean datasetFieldSvc) {
+//        logger.fine("deleteDatasetVersionMD");
+//        JsonObject jsonld = decontextualizeJsonLD(jsonLDBody);
+//        //All terms are now URIs
+//        //Setup dsftMap - URI to datasetFieldType map
+//        populateFieldTypeMap(metadataBlockSvc);
+//
+//
+//        //Another map - from datasetFieldType to an existing field in the dataset
+//        List<DatasetField> dsfl = dsv.getDatasetFields();
+//        Map<DatasetFieldType, DatasetField> fieldByTypeMap = new HashMap<DatasetFieldType, DatasetField>();
+//        for (DatasetField dsf : dsfl) {
+//            if (fieldByTypeMap.containsKey(dsf.getDatasetFieldType())) {
+//                // May have multiple values per field, but not multiple fields of one type?
+//                logger.warning("Multiple fields of type " + dsf.getDatasetFieldType().getName());
+//            }
+//            fieldByTypeMap.put(dsf.getDatasetFieldType(), dsf);
+//        }
+//
+//        TermsOfUseAndAccess terms = dsv.getTermsOfUseAndAccess().copyTermsOfUseAndAccess();
+//
+//        //Iterate through input json
+//        for (String key : jsonld.keySet()) {
+//            //Skip context (shouldn't be present with decontextualize used above)
+//            if (!key.equals("@context")) {
+//                if (dsftMap.containsKey(key)) {
+//                    //THere's a field type with theis URI
+//                    DatasetFieldType dsft = dsftMap.get(key);
+//                    DatasetField dsf = null;
+//                    if (fieldByTypeMap.containsKey(dsft)) {
+//                        //There's a field of this type
+//                        dsf = fieldByTypeMap.get(dsft);
+//
+//                        // Todo - normalize object vs. array
+//                        JsonArray valArray = getValues(jsonld.get(key), dsft.isAllowMultiples(), dsft.getName());
+//                        logger.fine("Deleting: " + key + " : " + valArray.toString());
+//                        DatasetField dsf2 = getReplacementField(dsf, valArray);
+//                        if(dsf2 == null) {
+//                            //Exact match - remove the field
+//                            dsfl.remove(dsf);
+//                        } else {
+//                            //Partial match - some values of a multivalue field match, so keep the remaining values
+//                            dsfl.remove(dsf);
+//                            dsfl.add(dsf2);
+//                        }
+//                    }
+//                } else {
+//                    // Internal/non-metadatablock terms
+//                    if (key.equals(JsonLDTerm.schemaOrg("license").getUrl())) {
+//                        if(jsonld.getString(key).equals(TermsOfUseAndAccess.CC0_URI)) {
+//                            setSemTerm(terms, key, TermsOfUseAndAccess.License.NONE);
+//                        } else {
+//                            throw new BadRequestException(
+//                                    "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
+//                        }
+//                    } else if (datasetTerms.contains(key)) {
+//                        if(!deleteIfSemTermMatches(terms, key, jsonld.get(key))) {
+//                            throw new BadRequestException(
+//                                    "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
+//                        }
+//                    } else if (key.equals(JsonLDTerm.fileTermsOfAccess.getUrl())) {
+//                        JsonObject fAccessObject = jsonld.getJsonObject(JsonLDTerm.fileTermsOfAccess.getUrl());
+//                        for (String fileKey : fAccessObject.keySet()) {
+//                            if (datafileTerms.contains(fileKey)) {
+//                                if(!deleteIfSemTermMatches(terms, key, jsonld.get(key))) {
+//                                    throw new BadRequestException(
+//                                            "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
+//                                }
+//                            }
+//                        }
+//                    } else {
+//                        throw new BadRequestException(
+//                                "Term: " + key + " not found.");
+//                                    }
+//
+//                    dsv.setTermsOfUseAndAccess(terms);
+//                }
+//            }
+//        }
+//        dsv.setDatasetFields(dsfl);
+//        return dsv;
+//    }
     
     /**
      * 
@@ -538,27 +538,27 @@ public class JSONLDUtil {
         }
     }
 
-    public static void populateContext(MetadataBlockServiceBean metadataBlockSvc) {
-        if (localContext.isEmpty()) {
-
-            List<MetadataBlock> mdbList = metadataBlockSvc.listMetadataBlocks();
-
-            for (MetadataBlock mdb : mdbList) {
-                boolean blockHasUri = mdb.getNamespaceUri() != null;
-                if (blockHasUri) {
-                    JsonLDNamespace.defineNamespace(mdb.getName(), mdb.getNamespaceUri());
-                }
-                for (DatasetFieldType dsft : mdb.getDatasetFieldTypes()) {
-                    if ((dsft.getUri() != null) && !JsonLDNamespace.isInNamespace(dsft.getUri())) {
-                        //Add term if uri exists and it's not in one of the namespaces already defined
-                        localContext.putIfAbsent(dsft.getName(), dsft.getUri());
-                    }
-                }
-            }
-            JsonLDNamespace.addNamespacesToContext(localContext);
-            logger.fine("LocalContext keys: " + String.join(", ", localContext.keySet()));
-        }
-    }
+//    public static void populateContext(MetadataBlockServiceBean metadataBlockSvc) {
+//        if (localContext.isEmpty()) {
+//
+//            List<MetadataBlock> mdbList = metadataBlockSvc.listMetadataBlocks();
+//
+//            for (MetadataBlock mdb : mdbList) {
+//                boolean blockHasUri = mdb.getNamespaceUri() != null;
+//                if (blockHasUri) {
+//                    JsonLDNamespace.defineNamespace(mdb.getName(), mdb.getNamespaceUri());
+//                }
+//                for (DatasetFieldType dsft : mdb.getDatasetFieldTypes()) {
+//                    if ((dsft.getUri() != null) && !JsonLDNamespace.isInNamespace(dsft.getUri())) {
+//                        //Add term if uri exists and it's not in one of the namespaces already defined
+//                        localContext.putIfAbsent(dsft.getName(), dsft.getUri());
+//                    }
+//                }
+//            }
+//            JsonLDNamespace.addNamespacesToContext(localContext);
+//            logger.fine("LocalContext keys: " + String.join(", ", localContext.keySet()));
+//        }
+//    }
 
     public static JsonObject decontextualizeJsonLD(String jsonLDString) {
         logger.fine(jsonLDString);
@@ -582,25 +582,25 @@ public class JSONLDUtil {
         }
     }
 
-    private static JsonObject recontextualizeJsonLD(JsonObject jsonldObj, MetadataBlockServiceBean metadataBlockSvc) {
-
-        populateContext(metadataBlockSvc);
-
-        // Use JsonLd to expand/compact to localContext
-        JsonDocument doc = JsonDocument.of(jsonldObj);
-        JsonArray array = null;
-        try {
-            array = JsonLd.expand(doc).get();
-
-            jsonldObj = JsonLd.compact(JsonDocument.of(array), JsonDocument.of(JSONLDUtil.getContext(localContext)))
-                    .get();
-            logger.fine("Compacted: " + jsonldObj.toString());
-            return jsonldObj;
-        } catch (JsonLdError e) {
-            System.out.println(e.getMessage());
-            return null;
-        }
-    }
+//    private static JsonObject recontextualizeJsonLD(JsonObject jsonldObj, MetadataBlockServiceBean metadataBlockSvc) {
+//
+//        populateContext(metadataBlockSvc);
+//
+//        // Use JsonLd to expand/compact to localContext
+//        JsonDocument doc = JsonDocument.of(jsonldObj);
+//        JsonArray array = null;
+//        try {
+//            array = JsonLd.expand(doc).get();
+//
+//            jsonldObj = JsonLd.compact(JsonDocument.of(array), JsonDocument.of(JSONLDUtil.getContext(localContext)))
+//                    .get();
+//            logger.fine("Compacted: " + jsonldObj.toString());
+//            return jsonldObj;
+//        } catch (JsonLdError e) {
+//            System.out.println(e.getMessage());
+//            return null;
+//        }
+//    }
 
     public static String prettyPrint(JsonValue val) {
         StringWriter sw = new StringWriter();
@@ -660,7 +660,7 @@ public class JSONLDUtil {
      * @param dateString The date string to determine the SimpleDateFormat pattern
      *                   for.
      * @return The matching SimpleDateFormat pattern, or null if format is unknown.
-     * @see SimpleDateFormat
+     * @see java.text.SimpleDateFormat
      */
     public static DateTimeFormatter determineDateTimeFormat(String dateString) {
         for (String regexp : DATETIME_FORMAT_REGEXPS.keySet()) {
@@ -712,112 +712,112 @@ public class JSONLDUtil {
             "https://dataverse.org/schema/core#contactForAccess", "https://dataverse.org/schema/core#sizeOfCollection",
             "https://dataverse.org/schema/core#studyCompletion"));
 
-    public static boolean isSet(TermsOfUseAndAccess terms, String semterm) {
-        switch (semterm) {
-        case "http://schema.org/license":
-            return !terms.getLicense().equals(TermsOfUseAndAccess.License.NONE);
-        case "https://dataverse.org/schema/core#termsOfUse":
-            return StringUtils.isBlank(terms.getTermsOfUse());
-        case "https://dataverse.org/schema/core#confidentialityDeclaration":
-            return StringUtils.isBlank(terms.getConfidentialityDeclaration());
-        case "https://dataverse.org/schema/core#specialPermissions":
-            return StringUtils.isBlank(terms.getSpecialPermissions());
-        case "https://dataverse.org/schema/core#restrictions":
-            return StringUtils.isBlank(terms.getRestrictions());
-        case "https://dataverse.org/schema/core#citationRequirements":
-            return StringUtils.isBlank(terms.getCitationRequirements());
-        case "https://dataverse.org/schema/core#depositorRequirements":
-            return StringUtils.isBlank(terms.getDepositorRequirements());
-        case "https://dataverse.org/schema/core#conditions":
-            return StringUtils.isBlank(terms.getConditions());
-        case "https://dataverse.org/schema/core#disclaimer":
-            return StringUtils.isBlank(terms.getDisclaimer());
-        case "https://dataverse.org/schema/core#termsOfAccess":
-            return StringUtils.isBlank(terms.getTermsOfAccess());
-        case "https://dataverse.org/schema/core#fileRequestAccess":
-            return !terms.isFileAccessRequest();
-        case "https://dataverse.org/schema/core#dataAccessPlace":
-            return StringUtils.isBlank(terms.getDataAccessPlace());
-        case "https://dataverse.org/schema/core#originalArchive":
-            return StringUtils.isBlank(terms.getOriginalArchive());
-        case "https://dataverse.org/schema/core#availabilityStatus":
-            return StringUtils.isBlank(terms.getAvailabilityStatus());
-        case "https://dataverse.org/schema/core#contactForAccess":
-            return StringUtils.isBlank(terms.getContactForAccess());
-        case "https://dataverse.org/schema/core#sizeOfCollection":
-            return StringUtils.isBlank(terms.getSizeOfCollection());
-        case "https://dataverse.org/schema/core#studyCompletion":
-            return StringUtils.isBlank(terms.getStudyCompletion());
-        default:
-            logger.warning("isSet called for " + semterm);
-            return false;
-        }
-    }
+//    public static boolean isSet(TermsOfUseAndAccess terms, String semterm) {
+//        switch (semterm) {
+//        case "http://schema.org/license":
+//            return !terms.getLicense().equals(TermsOfUseAndAccess.License.NONE);
+//        case "https://dataverse.org/schema/core#termsOfUse":
+//            return StringUtils.isBlank(terms.getTermsOfUse());
+//        case "https://dataverse.org/schema/core#confidentialityDeclaration":
+//            return StringUtils.isBlank(terms.getConfidentialityDeclaration());
+//        case "https://dataverse.org/schema/core#specialPermissions":
+//            return StringUtils.isBlank(terms.getSpecialPermissions());
+//        case "https://dataverse.org/schema/core#restrictions":
+//            return StringUtils.isBlank(terms.getRestrictions());
+//        case "https://dataverse.org/schema/core#citationRequirements":
+//            return StringUtils.isBlank(terms.getCitationRequirements());
+//        case "https://dataverse.org/schema/core#depositorRequirements":
+//            return StringUtils.isBlank(terms.getDepositorRequirements());
+//        case "https://dataverse.org/schema/core#conditions":
+//            return StringUtils.isBlank(terms.getConditions());
+//        case "https://dataverse.org/schema/core#disclaimer":
+//            return StringUtils.isBlank(terms.getDisclaimer());
+//        case "https://dataverse.org/schema/core#termsOfAccess":
+//            return StringUtils.isBlank(terms.getTermsOfAccess());
+//        case "https://dataverse.org/schema/core#fileRequestAccess":
+//            return !terms.isFileAccessRequest();
+//        case "https://dataverse.org/schema/core#dataAccessPlace":
+//            return StringUtils.isBlank(terms.getDataAccessPlace());
+//        case "https://dataverse.org/schema/core#originalArchive":
+//            return StringUtils.isBlank(terms.getOriginalArchive());
+//        case "https://dataverse.org/schema/core#availabilityStatus":
+//            return StringUtils.isBlank(terms.getAvailabilityStatus());
+//        case "https://dataverse.org/schema/core#contactForAccess":
+//            return StringUtils.isBlank(terms.getContactForAccess());
+//        case "https://dataverse.org/schema/core#sizeOfCollection":
+//            return StringUtils.isBlank(terms.getSizeOfCollection());
+//        case "https://dataverse.org/schema/core#studyCompletion":
+//            return StringUtils.isBlank(terms.getStudyCompletion());
+//        default:
+//            logger.warning("isSet called for " + semterm);
+//            return false;
+//        }
+//    }
 
-    public static void setSemTerm(TermsOfUseAndAccess terms, String semterm, Object value) {
-        switch (semterm) {
-        case "http://schema.org/license":
-            // Mirror rules from SwordServiceBean
-            if (((License) value).equals(TermsOfUseAndAccess.defaultLicense)) {
-                terms.setLicense(TermsOfUseAndAccess.defaultLicense);
-            } else {
-                throw new BadRequestException("The only allowed value for " + JsonLDTerm.schemaOrg("license").getUrl()
-                        + " is " + TermsOfUseAndAccess.CC0_URI);
-            }
-            break;
-        case "https://dataverse.org/schema/core#termsOfUse":
-            terms.setTermsOfUse((String) value);
-            break;
-        case "https://dataverse.org/schema/core#confidentialityDeclaration":
-            terms.setConfidentialityDeclaration((String) value);
-            break;
-        case "https://dataverse.org/schema/core#specialPermissions":
-            terms.setSpecialPermissions((String) value);
-            break;
-        case "https://dataverse.org/schema/core#restrictions":
-            terms.setRestrictions((String) value);
-            break;
-        case "https://dataverse.org/schema/core#citationRequirements":
-            terms.setCitationRequirements((String) value);
-            break;
-        case "https://dataverse.org/schema/core#depositorRequirements":
-            terms.setDepositorRequirements((String) value);
-            break;
-        case "https://dataverse.org/schema/core#conditions":
-            terms.setConditions((String) value);
-            break;
-        case "https://dataverse.org/schema/core#disclaimer":
-            terms.setDisclaimer((String) value);
-            break;
-        case "https://dataverse.org/schema/core#termsOfAccess":
-            terms.setTermsOfAccess((String) value);
-            break;
-        case "https://dataverse.org/schema/core#fileRequestAccess":
-            terms.setFileAccessRequest((boolean) value);
-            break;
-        case "https://dataverse.org/schema/core#dataAccessPlace":
-            terms.setDataAccessPlace((String) value);
-            break;
-        case "https://dataverse.org/schema/core#originalArchive":
-            terms.setOriginalArchive((String) value);
-            break;
-        case "https://dataverse.org/schema/core#availabilityStatus":
-            terms.setAvailabilityStatus((String) value);
-            break;
-        case "https://dataverse.org/schema/core#contactForAccess":
-            terms.setContactForAccess((String) value);
-            break;
-        case "https://dataverse.org/schema/core#sizeOfCollection":
-            terms.setSizeOfCollection((String) value);
-            break;
-        case "https://dataverse.org/schema/core#studyCompletion":
-            terms.setStudyCompletion((String) value);
-            break;
-        default:
-            logger.warning("setSemTerm called for " + semterm);
-            break;
-        }
-    }
+//    public static void setSemTerm(TermsOfUseAndAccess terms, String semterm, Object value) {
+//        switch (semterm) {
+//        case "http://schema.org/license":
+//            // Mirror rules from SwordServiceBean
+//            if (((License) value).equals(TermsOfUseAndAccess.defaultLicense)) {
+//                terms.setLicense(TermsOfUseAndAccess.defaultLicense);
+//            } else {
+//                throw new BadRequestException("The only allowed value for " + JsonLDTerm.schemaOrg("license").getUrl()
+//                        + " is " + TermsOfUseAndAccess.CC0_URI);
+//            }
+//            break;
+//        case "https://dataverse.org/schema/core#termsOfUse":
+//            terms.setTermsOfUse((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#confidentialityDeclaration":
+//            terms.setConfidentialityDeclaration((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#specialPermissions":
+//            terms.setSpecialPermissions((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#restrictions":
+//            terms.setRestrictions((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#citationRequirements":
+//            terms.setCitationRequirements((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#depositorRequirements":
+//            terms.setDepositorRequirements((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#conditions":
+//            terms.setConditions((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#disclaimer":
+//            terms.setDisclaimer((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#termsOfAccess":
+//            terms.setTermsOfAccess((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#fileRequestAccess":
+//            terms.setFileAccessRequest((boolean) value);
+//            break;
+//        case "https://dataverse.org/schema/core#dataAccessPlace":
+//            terms.setDataAccessPlace((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#originalArchive":
+//            terms.setOriginalArchive((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#availabilityStatus":
+//            terms.setAvailabilityStatus((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#contactForAccess":
+//            terms.setContactForAccess((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#sizeOfCollection":
+//            terms.setSizeOfCollection((String) value);
+//            break;
+//        case "https://dataverse.org/schema/core#studyCompletion":
+//            terms.setStudyCompletion((String) value);
+//            break;
+//        default:
+//            logger.warning("setSemTerm called for " + semterm);
+//            break;
+//        }
+//    }
 
     private static boolean deleteIfSemTermMatches(TermsOfUseAndAccess terms, String semterm, JsonValue jsonValue) {
         boolean foundTerm=false;
