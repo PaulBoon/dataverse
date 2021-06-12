@@ -234,12 +234,12 @@ public class Datasets extends AbstractApiBean {
     
     @Inject
     DataverseRequestServiceBean dvRequestService;
+    
+    @Inject
+    LicenseServiceBean licenseServiceBean;
 
     @Inject
     WorkflowServiceBean wfService;
-
-    @Inject
-    LicenseServiceBean licenseServiceBean;
 
     /**
      * Used to consolidate the way we parse and handle dataset versions.
@@ -514,7 +514,7 @@ public class Datasets extends AbstractApiBean {
         
         String indexFileName = folderName.equals("") ? ".index.html"
                 : ".index-" + folderName.replace('/', '_') + ".html";
-        response.setHeader("Content-disposition", "attachment; filename=\"" + indexFileName + "\"");
+        response.setHeader("Content-disposition", "filename=\"" + indexFileName + "\"");
 
         
         return Response.ok()

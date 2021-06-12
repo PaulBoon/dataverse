@@ -825,13 +825,19 @@ through the Dataverse application.
 
 For example, if you have a dataset version with 2 files, one with the folder named "subfolder":
 
+|image1|
+
 .. |image1| image:: ./img/dataset_page_files_view.png
 
 or, as viewed as a tree on the dataset page:
 
+|image2|
+
 .. |image2| image:: ./img/dataset_page_tree_view.png
 
 The output of the API for the top-level folder (``/api/datasets/{dataset}/dirindex/``) will be as follows:
+
+|image3|
 
 .. |image3| image:: ./img/index_view_top.png
 
@@ -850,6 +856,8 @@ with the underlying html source:
     </table></body></html>
 
 The ``/dirindex/?folder=subfolder`` link above will produce the following view:
+
+|image4|
 
 .. |image4| image:: ./img/index_view_subfolder.png
 
@@ -3492,3 +3500,28 @@ Recursively applies the role assignments of the specified Dataverse collection, 
   GET http://$SERVER/api/admin/dataverse/{dataverse alias}/addRoleAssignmentsToChildren
   
 Note: setting ``:InheritParentRoleAssignments`` will automatically trigger inheritance of the parent Dataverse collection's role assignments for a newly created Dataverse collection. Hence this API call is intended as a way to update existing child Dataverse collections or to update children after a change in role assignments has been made on a parent Dataverse collection.
+
+
+Manage Available Standard License Terms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+View the list of standard license terms that can be selected for a dataset::
+
+    curl http://$SERVER/api/admin/licenses
+
+View the details of the standard license with the database ID specified in ``$ID``::
+
+    export ID=1
+    curl http://$SERVER/api/admin/licenses/$ID
+
+Add a new license by posting a JSON file adapted from this example :download:`add-license.json <../_static/api/add-license.json>`. The ``name`` and ``uri`` of the new license must be unique. ::
+
+    curl -X POST -H 'Content-Type: application/json' --data-binary @add-license.json http://$SERVER/api/admin/licenses
+
+Overwrite the license with the database specified in ``$ID``::
+
+    curl -X PUT -H 'Content-Type: application/json' --data-binary @edit-license.json http://$SERVER/api/admin/licenses/$ID
+
+Delete the license with with the database specified in ``$ID``::
+
+    curl -X DELETE http://$SERVER/api/admin/licenses/$ID

@@ -378,6 +378,15 @@ public class DatasetPage implements java.io.Serializable {
         this.licenseId = licenseId;
     }
 
+    public License getSelectedLicenseById(){
+        try {
+            return licenseServiceBean.getById(licenseId);
+        } catch (FetchException e) {
+            logger.log(Level.SEVERE,"Exception: " + e.getMessage());
+        }
+        return null;
+    }
+
     // TODO: Consider renaming "configureTools" to "fileConfigureTools".
     List<ExternalTool> configureTools = new ArrayList<>();
     // TODO: Consider renaming "exploreTools" to "fileExploreTools".
@@ -1653,7 +1662,7 @@ public class DatasetPage implements java.io.Serializable {
             //then create new working version from the selected template
             workingVersion.updateDefaultValuesFromTemplate(selectedTemplate, licenseServiceBean.getCC0());
             updateDatasetFieldInputLevels();
-        } else { 
+        } else {
             workingVersion.initDefaultValues(licenseServiceBean.getCC0());
             updateDatasetFieldInputLevels();
         }
@@ -2078,11 +2087,11 @@ public class DatasetPage implements java.io.Serializable {
         previewTools = externalToolService.findFileToolsByType(ExternalTool.Type.PREVIEW);
         datasetExploreTools = externalToolService.findDatasetToolsByType(ExternalTool.Type.EXPLORE);
         rowsPerPage = 10;
-        licenseSelectItems = licenseServiceBean.listAll().stream()
+        licenseSelectItems = licenseServiceBean.listAllActive().stream()
                                                              .map(license -> new SelectItem(license.getId().toString(), license.getName()))
                                                              .collect(Collectors.toList());
-        
-        
+
+
         return null;
     }
 
@@ -3635,6 +3644,7 @@ public class DatasetPage implements java.io.Serializable {
         } else {
             License license = licenseServiceBean.getById(licenseId);
             terms.setLicense(license);
+            terms.clearCustomTermsVariables();
         }
     }
 

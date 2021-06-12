@@ -16,7 +16,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
-import edu.harvard.iq.dataverse.License;
+
 /**
  *
  * 
@@ -61,7 +61,7 @@ public class TermsOfUseAndAccess implements Serializable {
     
     @ManyToOne
     @JoinColumn(name="license_id")
-    private License license;
+    private edu.harvard.iq.dataverse.License license;
 
     @Column(columnDefinition="TEXT")      
     private String termsOfUse;
@@ -118,11 +118,11 @@ public class TermsOfUseAndAccess implements Serializable {
         this.fileAccessRequest = fileAccessRequest;
     }
     
-    public License getLicense() {
+    public edu.harvard.iq.dataverse.License getLicense() {
         return license;
     }
 
-    public void setLicense(License license) {
+    public void setLicense(edu.harvard.iq.dataverse.License license) {
         this.license = license;
     }
 
@@ -271,12 +271,23 @@ public class TermsOfUseAndAccess implements Serializable {
         return retVal;
     }
     
-    public License getCC0() {
+    public edu.harvard.iq.dataverse.License getCC0() {
         String shortDescription = "You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.";
         URI uri = URI.create("https://creativecommons.org/publicdomain/zero/1.0/");
         URI iconUrl = URI.create("https://www.researchgate.net/profile/Donat-Agosti/publication/51971424/figure/fig2/AS:203212943564807@1425461149299/Logo-of-the-CC-Zero-or-CC0-Public-Domain-Dedication-License-No-Rights-Reserved-CC.png");
-        License license = new License("CC0", shortDescription, uri, iconUrl, true);
+        edu.harvard.iq.dataverse.License license = new edu.harvard.iq.dataverse.License("CC0", shortDescription, uri, iconUrl, true);
         return license;
+    }
+
+    public void clearCustomTermsVariables(){
+        termsOfUse = null;
+        confidentialityDeclaration = null;
+        specialPermissions = null;
+        restrictions = null;
+        citationRequirements = null;
+        depositorRequirements = null;
+        conditions = null;
+        disclaimer = null;
     }
     
     /**
