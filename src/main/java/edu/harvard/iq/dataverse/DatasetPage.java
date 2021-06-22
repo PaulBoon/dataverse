@@ -1660,10 +1660,10 @@ public class DatasetPage implements java.io.Serializable {
         selectedTemplate = (Template) event.getNewValue();
         if (selectedTemplate != null) {
             //then create new working version from the selected template
-            workingVersion.updateDefaultValuesFromTemplate(selectedTemplate, licenseServiceBean.getCC0());
+            workingVersion.updateDefaultValuesFromTemplate(selectedTemplate, licenseServiceBean.getDefault());
             updateDatasetFieldInputLevels();
-        } else {
-            workingVersion.initDefaultValues(licenseServiceBean.getCC0());
+        } else { 
+            workingVersion.initDefaultValues(licenseServiceBean.getDefault());
             updateDatasetFieldInputLevels();
         }
         resetVersionUI();
@@ -2022,10 +2022,10 @@ public class DatasetPage implements java.io.Serializable {
                         selectedTemplate = testT;
                     }
                 }
-                workingVersion = dataset.getEditVersion(selectedTemplate, null, licenseServiceBean.getCC0());
+                workingVersion = dataset.getEditVersion(selectedTemplate, null, licenseServiceBean.getDefault());
                 updateDatasetFieldInputLevels();
             } else {
-                workingVersion = dataset.getCreateVersion(licenseServiceBean.getCC0());
+                workingVersion = dataset.getCreateVersion(licenseServiceBean.getDefault());
                 updateDatasetFieldInputLevels();
             }
 
@@ -2090,8 +2090,10 @@ public class DatasetPage implements java.io.Serializable {
         licenseSelectItems = licenseServiceBean.listAllActive().stream()
                                                              .map(license -> new SelectItem(license.getId().toString(), license.getName()))
                                                              .collect(Collectors.toList());
-
-
+        if (systemConfig.isAllowCustomTerms()) {
+            licenseSelectItems.add(new SelectItem(null, BundleUtil.getStringFromBundle("license.custom")));
+        }
+        
         return null;
     }
 
@@ -2454,7 +2456,7 @@ public class DatasetPage implements java.io.Serializable {
             dataset = datasetService.find(dataset.getId());
         }
         workingVersion = dataset.getEditVersion();
-        clone = workingVersion.cloneDatasetVersion(licenseServiceBean.getCC0());
+        clone = workingVersion.cloneDatasetVersion(licenseServiceBean.getDefault());
         if (editMode == EditMode.INFO) {
             // ?
         } else if (editMode == EditMode.FILE) {

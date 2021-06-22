@@ -441,7 +441,13 @@ public class SettingsServiceBean {
         /**
          * Configurable text for alert/info message on passwordreset.xhtml when users are required to update their password.
          */
-        CustomPasswordResetAlertIntro, CustomPasswordResetButton;
+        CustomPasswordResetAlertIntro, CustomPasswordResetButton,
+
+        /*
+         * Include "Custom Terms" as an item in the license drop-down or not.
+         */
+        AllowCustomTerms
+        ;
 
         @Override
         public String toString() {

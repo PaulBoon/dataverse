@@ -6,15 +6,16 @@ import edu.harvard.iq.dataverse.api.ConflictException;
 import edu.harvard.iq.dataverse.api.FetchException;
 import edu.harvard.iq.dataverse.api.RequestBodyException;
 import edu.harvard.iq.dataverse.api.UpdateException;
-import java.net.URI;
-import java.util.List;
-import java.util.logging.Logger;
+
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Named;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
+import java.net.URI;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * @author Jing Ma
@@ -58,19 +59,9 @@ public class LicenseServiceBean {
         return licenses.get(0);
     }
 
-    public License getCC0() {
+    public License getDefault() {
         List<License> licenses = em.createNamedQuery("License.findDefault", License.class)
                 .getResultList();
-        // TODO: Move this to flyway script
-        if (licenses.isEmpty()) {
-            String shortDescription = "You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.";
-            URI uri = URI.create("https://creativecommons.org/publicdomain/zero/1.0/");
-            URI iconUrl = URI.create("https://www.researchgate.net/profile/Donat-Agosti/publication/51971424/figure/fig2/AS:203212943564807@1425461149299/Logo-of-the-CC-Zero-or-CC0-Public-Domain-Dedication-License-No-Rights-Reserved-CC.png");
-            License license = new License("CC0", shortDescription, uri, iconUrl, true);
-            em.persist(license);
-            em.flush();
-            return license;
-        }
         return licenses.get(0);
     }
 
@@ -78,14 +69,18 @@ public class LicenseServiceBean {
         if (license.getId() != null) {
             throw new RequestBodyException("There shouldn't be an ID in the request body");
         }
-        List<License> licenses = em.createNamedQuery("License.findByNameOrUri", License.class)
-            .setParameter("name", license.getName() )
-            .setParameter("uri", license.getUri().toASCIIString() )
-            .getResultList();
-        if (!licenses.isEmpty()) {
-            throw new ConflictException("A license with the same URI or name is already present.");
+        try {
+            em.persist(license);
+            em.flush();
         }
-        em.persist(license);
+        catch (PersistenceException p) {
+            if (p.getMessage().contains("duplicate key")) {
+                throw new ConflictException("A license with the same URI or name is already present.");
+            }
+            else {
+                throw p;
+            }
+        }
         return license;
     }
 
@@ -108,11 +103,17 @@ public class LicenseServiceBean {
         }
     }
 
-    public int deleteById(long id) throws PersistenceException {
+    public int deleteById(long id) throws ConflictException {
         actionLogSvc.log( new ActionLogRecord(ActionLogRecord.ActionType.Admin, "delete")
                             .setInfo(Long.toString(id)));
-        return em.createNamedQuery("License.deleteById")
-                .setParameter("id", id)
-                .executeUpdate();
+        try {
+            return em.createNamedQuery("License.deleteById").setParameter("id", id).executeUpdate();
+        } catch (PersistenceException p) {
+            if (p.getMessage().contains("violates foreign key constraint")) {
+                throw new ConflictException("License with id " + id + " is referenced and cannot be deleted.");
+            } else {
+                throw p;
+            }
+        }
     }
 }
