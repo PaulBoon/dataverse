@@ -445,12 +445,13 @@ public class SettingsServiceBean {
          * datasetContact, and contributor, but additional fields such as depositor, grantNumber, and
          * publication might also need to be included.
          */
-        AnonymizedFieldTypeNames
-        ExportInstallationAsDistributorOnlyWhenNotSet,
+        AnonymizedFieldTypeNames,
+
         /**
          * Configurable text for alert/info message on passwordreset.xhtml when users are required to update their password.
          */
-        CustomPasswordResetAlertIntro, CustomPasswordResetButton,
+        CustomPasswordResetAlertIntro,
+        CustomPasswordResetButton,
 
         /*
          * Include "Custom Terms" as an item in the license drop-down or not.
