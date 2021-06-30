@@ -1,10 +1,18 @@
 package edu.harvard.iq.dataverse.settings;
 
+import edu.harvard.iq.dataverse.Dataset;
 import edu.harvard.iq.dataverse.actionlogging.ActionLogRecord;
 import edu.harvard.iq.dataverse.actionlogging.ActionLogServiceBean;
 import edu.harvard.iq.dataverse.api.ApiBlockingFilter;
+import edu.harvard.iq.dataverse.engine.command.DataverseRequest;
 import edu.harvard.iq.dataverse.util.StringUtil;
 
+import java.io.StringReader;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Named;
@@ -12,12 +20,6 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import java.io.StringReader;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Service bean accessing a persistent hash map, used as settings in the application.
@@ -438,14 +440,14 @@ public class SettingsServiceBean {
          * when the Distributor field (citation metadatablock) is set (true)
          */
         ExportInstallationAsDistributorOnlyWhenNotSet,
-        /**
+       /**
          * A comma-separated list of field type names that should be 'withheld' when
          * dataset access occurs via a Private Url with Anonymized Access (e.g. to
          * support anonymized review). A suggested minimum includes author,
          * datasetContact, and contributor, but additional fields such as depositor, grantNumber, and
          * publication might also need to be included.
          */
-        AnonymizedFieldTypeNames,
+       AnonymizedFieldTypeNames,
 
         /**
          * Configurable text for alert/info message on passwordreset.xhtml when users are required to update their password.
