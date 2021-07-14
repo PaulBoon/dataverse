@@ -9,6 +9,7 @@ import edu.harvard.iq.dataverse.DatasetDistributor;
 import edu.harvard.iq.dataverse.DatasetFieldType;
 import edu.harvard.iq.dataverse.DatasetField;
 import edu.harvard.iq.dataverse.DatasetFieldCompoundValue;
+import edu.harvard.iq.dataverse.DatasetFieldServiceBean;
 import edu.harvard.iq.dataverse.DatasetFieldValue;
 import edu.harvard.iq.dataverse.DatasetLock;
 import edu.harvard.iq.dataverse.DatasetVersion;
@@ -80,8 +81,12 @@ public class JsonPrinter {
     @EJB
     static SettingsServiceBean settingsService;
 
-    public static void injectSettingsService(SettingsServiceBean ssb) {
+    @EJB
+    static DatasetFieldServiceBean datasetFieldService;
+    
+    public static void injectSettingsService(SettingsServiceBean ssb, DatasetFieldServiceBean dfsb) {
             settingsService = ssb;
+            datasetFieldService = dfsb;
     }
 
     public JsonPrinter() {
@@ -486,8 +491,8 @@ public class JsonPrinter {
 
         blockBld.add("displayName", block.getDisplayName());
         final JsonArrayBuilder fieldsArray = Json.createArrayBuilder();
-
-        DatasetFieldWalker.walk(fields, settingsService, new DatasetFieldsToJson(fieldsArray));
+        Map<Long, JsonObject> cvocMap = (datasetFieldService==null) ? new HashMap<Long, JsonObject>() :datasetFieldService.getCVocConf(); 
+        DatasetFieldWalker.walk(fields, settingsService, cvocMap, new DatasetFieldsToJson(fieldsArray));
 
         blockBld.add("fields", fieldsArray);
         return blockBld;
@@ -508,7 +513,8 @@ public class JsonPrinter {
             return null;
         } else {
             JsonArrayBuilder fieldArray = Json.createArrayBuilder();
-            DatasetFieldWalker.walk(dfv, new DatasetFieldsToJson(fieldArray));
+            Map<Long, JsonObject> cvocMap = (datasetFieldService==null) ? new HashMap<Long, JsonObject>() :datasetFieldService.getCVocConf();
+            DatasetFieldWalker.walk(dfv, new DatasetFieldsToJson(fieldArray), cvocMap);
             JsonArray out = fieldArray.build();
             return out.getJsonObject(0);
         }
@@ -712,6 +718,17 @@ public class JsonPrinter {
         }
 
         @Override
+        public void externalVocabularyValue(DatasetFieldValue dsfv, JsonObject cvocEntry) {
+            if (dsfv.getValue() != null) {
+                if (!cvocEntry.containsKey("retrieval-filtering")) {
+                    valueArrStack.peek().add(dsfv.getValue());
+                } else {
+                    valueArrStack.peek().add(datasetFieldService.getExternalVocabularyValue(dsfv.getValue()));
+                }
+            }
+        }
+        
+        @Override
         public void primitiveValue(DatasetFieldValue dsfv) {
             if (dsfv.getValue() != null) {
                 valueArrStack.peek().add(dsfv.getValue());
@@ -719,7 +736,7 @@ public class JsonPrinter {
         }
 
         @Override
-        public void controledVocabularyValue(ControlledVocabularyValue cvv) {
+        public void controlledVocabularyValue(ControlledVocabularyValue cvv) {
             valueArrStack.peek().add(cvv.getStrValue());
         }
 

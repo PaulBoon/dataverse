@@ -62,6 +62,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -84,6 +85,11 @@ import javax.faces.event.ValueChangeEvent;
 import javax.faces.view.ViewScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonString;
 
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.file.UploadedFile;
@@ -3499,6 +3505,12 @@ public class DatasetPage implements java.io.Serializable {
                 ((UpdateDatasetVersionCommand) cmd).setValidateLenient(true);
             }
             dataset = commandEngine.submit(cmd);
+            for (DatasetField df : dataset.getLatestVersion().getDatasetFields()) {
+                logger.info("Found id: " + df.getDatasetFieldType().getId());
+                if (fieldService.getCVocConf().containsKey(df.getDatasetFieldType().getId())) {
+                    fieldService.registerExternalVocabValues(df);
+                }
+            }
             if (editMode == EditMode.CREATE) {
                 if (session.getUser() instanceof AuthenticatedUser) {
                     userNotificationService.sendNotification((AuthenticatedUser) session.getUser(), dataset.getCreateDate(), UserNotification.Type.CREATEDS, dataset.getLatestVersion().getId());
@@ -5572,4 +5584,42 @@ public class DatasetPage implements java.io.Serializable {
 
         return dataFile.getDeleted();
     }
+    
+    Map<Long, JsonObject> cachedCvocMap=null;
+    public Map<Long, JsonObject> getCVocConf() {
+        //Cache this in the view
+        if(cachedCvocMap==null) {
+        cachedCvocMap = fieldService.getCVocConf();
+        }
+        return cachedCvocMap;
+    }
+    
+    public List<String> getVocabList(long id) {
+        return getCVocConf().get(id).getJsonArray("vocabs").getValuesAs(JsonString::getString);
+    }
+    
+    public List<String> getVocabScripts() {
+        //ToDo - only return scripts that are needed (those fields are set on display pages, those blocks/fields are allowed in the Dataverse collection for create/edit)?
+        Set<String> scripts = new HashSet<String>();
+        for(JsonObject jo: getCVocConf().values()) {
+            scripts.add(jo.getString("js-url"));
+        }
+        return Arrays.asList(scripts.toArray(new String[0]));
+    }
+
+    public String getFieldLanguage(String languages) {
+        // If the fields list of supported langauges contains the current locale (e.g.
+        // the lang of the UI, or the current metadata input/display lang (tbd)), use
+        // that. Otherwise, return the first in the list
+        String[] langStrings = languages.split("\\s*,\\s*");
+        if (langStrings.length > 0) {
+            if (Arrays.asList(langStrings).contains(session.getLocaleCode())) {
+                return session.getLocaleCode();
+            } else {
+                return langStrings[0];
+            }
+        }
+        return null;
+    }
+    
 }
