@@ -17,6 +17,7 @@ import edu.harvard.iq.dataverse.DataverseServiceBean;
 import edu.harvard.iq.dataverse.DataverseSession;
 import edu.harvard.iq.dataverse.DvObject;
 import edu.harvard.iq.dataverse.EjbDataverseEngine;
+import edu.harvard.iq.dataverse.LicenseServiceBean;
 import edu.harvard.iq.dataverse.MetadataBlock;
 import edu.harvard.iq.dataverse.MetadataBlockServiceBean;
 import edu.harvard.iq.dataverse.PermissionServiceBean;
@@ -112,6 +113,7 @@ import edu.harvard.iq.dataverse.util.json.NullSafeJsonBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.net.URI;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.time.ZoneId;
@@ -129,6 +131,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.EJBException;
+import javax.faces.context.FacesContext;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -164,6 +167,8 @@ import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
 import com.amazonaws.services.s3.model.PartETag;
+
+import java.util.Map.Entry;
 import edu.harvard.iq.dataverse.FileMetadata;
 
 @Path("datasets")
@@ -190,7 +195,7 @@ public class Datasets extends AbstractApiBean {
     
     @EJB
     DDIExportServiceBean ddiExportService;
-    
+
     @EJB
     MetadataBlockServiceBean metadataBlockService;
     
@@ -224,6 +229,9 @@ public class Datasets extends AbstractApiBean {
     
     @Inject
     DataverseRequestServiceBean dvRequestService;
+
+    @Inject
+    LicenseServiceBean licenseServiceBean;
 
     /**
      * Used to consolidate the way we parse and handle dataset versions.
@@ -651,7 +659,7 @@ public class Datasets extends AbstractApiBean {
             
         }
     }
-  
+
     @GET
     @Path("{id}/versions/{versionId}/metadata")
     @Produces("application/ld+json, application/json-ld")
@@ -679,7 +687,7 @@ public class Datasets extends AbstractApiBean {
     public Response getVersionJsonLDMetadata(@PathParam("id") String id, @Context UriInfo uriInfo, @Context HttpHeaders headers) {
         return getVersionJsonLDMetadata(id, ":draft", uriInfo, headers);
     }
-            
+
     @PUT
     @Path("{id}/metadata")
     @Consumes("application/ld+json, application/json-ld")
@@ -691,7 +699,7 @@ public class Datasets extends AbstractApiBean {
             DatasetVersion dsv = ds.getEditVersion();
             boolean updateDraft = ds.getLatestVersion().isDraft();
             dsv = JSONLDUtil.updateDatasetVersionMDFromJsonLD(dsv, jsonLDBody, metadataBlockService, datasetFieldSvc, !replaceTerms, false);
-            
+
             DatasetVersion managedVersion;
             if (updateDraft) {
                 Dataset managedDataset = execCommand(new UpdateDatasetVersionCommand(ds, req));
@@ -709,7 +717,7 @@ public class Datasets extends AbstractApiBean {
             return error(Status.BAD_REQUEST, "Error parsing Json: " + jpe.getMessage());
         }
     }
-    
+
     @PUT
     @Path("{id}/metadata/delete")
     @Consumes("application/ld+json, application/json-ld")
@@ -1235,7 +1243,25 @@ public class Datasets extends AbstractApiBean {
             return ex.getResponse();
         }
     }
-    
+
+    @GET
+    @Path("{id}/versions/{versionId}/customlicense")
+    public Response getCustomTermsTab(@PathParam("id") String id, @PathParam("versionId") String versionId, @Context UriInfo uriInfo, @Context HttpHeaders headers){
+        User user = session.getUser();
+        String persistentId;
+        try {
+            if (getDatasetVersionOrDie(createDataverseRequest(user), versionId, findDatasetOrDie(id), uriInfo, headers).getTermsOfUseAndAccess().getLicense() != null){
+                return error(Status.NOT_FOUND, "This Dataset has no custom license");
+            }
+            persistentId = getRequestParameter(":persistentId".substring(1));
+            if (versionId.equals(":draft")) versionId = "DRAFT";
+        } catch (WrappedResponse wrappedResponse) {
+           return wrappedResponse.getResponse();
+        }
+        return Response.seeOther(URI.create(systemConfig.getDataverseSiteUrl() + "/dataset.xhtml?persistentId=" + persistentId + "&version=" + versionId + "&selectTab=termsTab")).build();
+    }
+
+
     @GET
     @Path("{id}/links")
     public Response getLinks(@PathParam("id") String idSupplied ) {
@@ -1975,7 +2001,8 @@ public Response completeMPUpload(String partETagBody, @QueryParam("globalid") St
                                                 fileService,
                                                 permissionSvc,
                                                 commandEngine,
-                                                systemConfig);
+                                                systemConfig,
+                                                licenseServiceBean);
 
 
         //-------------------

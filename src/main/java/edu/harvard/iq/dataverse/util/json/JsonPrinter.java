@@ -16,6 +16,7 @@ import edu.harvard.iq.dataverse.Dataverse;
 import edu.harvard.iq.dataverse.DataverseContact;
 import edu.harvard.iq.dataverse.DataverseFacet;
 import edu.harvard.iq.dataverse.DataverseTheme;
+import edu.harvard.iq.dataverse.License;
 import edu.harvard.iq.dataverse.authorization.DataverseRole;
 import edu.harvard.iq.dataverse.authorization.groups.impl.maildomain.MailDomainGroup;
 import edu.harvard.iq.dataverse.authorization.providers.builtin.BuiltinUser;
@@ -42,9 +43,12 @@ import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.util.DatasetFieldWalker;
 import edu.harvard.iq.dataverse.util.StringUtil;
 import static edu.harvard.iq.dataverse.util.json.NullSafeJsonBuilder.jsonObjectBuilder;
+
+import edu.harvard.iq.dataverse.util.SystemConfig;
 import edu.harvard.iq.dataverse.workflow.Workflow;
 import edu.harvard.iq.dataverse.workflow.step.WorkflowStepData;
 
+import java.net.URISyntaxException;
 import java.util.*;
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
@@ -350,8 +354,11 @@ public class JsonPrinter {
                 .add("lastUpdateTime", format(dsv.getLastUpdateTime()))
                 .add("releaseTime", format(dsv.getReleaseTime()))
                 .add("createTime", format(dsv.getCreateTime()))
-                .add("license", dsv.getTermsOfUseAndAccess().getLicense() != null ? dsv.getTermsOfUseAndAccess().getLicense().toString() : null)
-                .add("termsOfUse", getLicenseInfo(dsv))
+                .add("license", jsonObjectBuilder()
+                        .add("label", dsv.getTermsOfUseAndAccess().getLicense() != null ? dsv.getTermsOfUseAndAccess().getLicense().getName() : "CUSTOM")
+                        .add("uri", dsv.getTermsOfUseAndAccess().getLicense() != null ? dsv.getTermsOfUseAndAccess().getLicense().getUri().toString() :
+                                (dsv.getVersionState().name().equals("DRAFT") ? dsv.getDataverseSiteUrl() + "/api/datasets/:persistentId/versions/:draft/customlicense?persistentId=" + dsv.getDataset().getGlobalId().asString() :
+                                        dsv.getDataverseSiteUrl() + "/api/datasets/:persistentId/versions/" + dsv.getVersionNumber() + "." + dsv.getMinorVersionNumber() + "/customlicense?persistentId=" + dsv.getDataset().getGlobalId().asString())))
                 .add("confidentialityDeclaration", dsv.getTermsOfUseAndAccess().getConfidentialityDeclaration() != null ? dsv.getTermsOfUseAndAccess().getConfidentialityDeclaration() : null)
                 .add("availabilityStatus", dsv.getTermsOfUseAndAccess().getAvailabilityStatus() != null ? dsv.getTermsOfUseAndAccess().getAvailabilityStatus() : null)
                 .add("specialPermissions", dsv.getTermsOfUseAndAccess().getSpecialPermissions() != null ? dsv.getTermsOfUseAndAccess().getSpecialPermissions() : null)
@@ -395,13 +402,14 @@ public class JsonPrinter {
 
         return bld;
     }
-    
-    private static String getLicenseInfo(DatasetVersion dsv) {
-        if (dsv.getTermsOfUseAndAccess().getLicense() != null && dsv.getTermsOfUseAndAccess().getLicense().equals(TermsOfUseAndAccess.License.CC0)) {
-            return "CC0 Waiver";
-        }
-        return dsv.getTermsOfUseAndAccess().getTermsOfUse();
-    }
+
+// TODO: FIX FOR MULTI-LICENSE
+//    private static String getLicenseInfo(DatasetVersion dsv) {
+//        if (dsv.getTermsOfUseAndAccess().getLicense() != null && dsv.getTermsOfUseAndAccess().getLicense().getName().equals(TermsOfUseAndAccess.defaultLicense)) {
+//            return "CC0 Waiver";
+//        }
+//        return dsv.getTermsOfUseAndAccess().getTermsOfUse();
+//    }
 
     /**
      * Export formats such as DDI require the citation to be included. See
@@ -770,6 +778,16 @@ public class JsonPrinter {
         return jsonObjectBuilder()
                     .add("id", String.valueOf(aFacet.getId())) // TODO should just be id I think
                     .add("name", aFacet.getDatasetFieldType().getDisplayName());
+    }
+
+    public static JsonObjectBuilder json(License license) {
+        return jsonObjectBuilder()
+            .add("id", license.getId())
+            .add("name", license.getName())
+            .add("shortDescription", license.getShortDescription())
+            .add("uri", license.getUri().toString())
+            .add("iconUrl", license.getIconUrl().toString())
+            .add("active", license.isActive());
     }
         
     public static Collector<String, JsonArrayBuilder, JsonArrayBuilder> stringsToJsonArray() {

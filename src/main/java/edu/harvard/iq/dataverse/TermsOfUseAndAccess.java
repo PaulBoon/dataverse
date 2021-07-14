@@ -6,13 +6,14 @@
 package edu.harvard.iq.dataverse;
 
 import java.io.Serializable;
+import java.net.URI;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 
 /**
@@ -57,10 +58,10 @@ public class TermsOfUseAndAccess implements Serializable {
         this.template = template;
     }
     
-    
-    @Enumerated(EnumType.STRING)
-    private TermsOfUseAndAccess.License license;
-    
+    @ManyToOne
+    @JoinColumn(name="license_id")
+    private License license;
+
     @Column(columnDefinition="TEXT")      
     private String termsOfUse;
     
@@ -116,11 +117,11 @@ public class TermsOfUseAndAccess implements Serializable {
         this.fileAccessRequest = fileAccessRequest;
     }
     
-    public TermsOfUseAndAccess.License getLicense() {
+    public License getLicense() {
         return license;
     }
 
-    public void setLicense(TermsOfUseAndAccess.License license) {
+    public void setLicense(License license) {
         this.license = license;
     }
 
@@ -269,18 +270,33 @@ public class TermsOfUseAndAccess implements Serializable {
         return retVal;
     }
 
-    
-        
-    public enum License {
-        NONE, CC0
+    // TODO: REMOVE, IS ONLY USED IN TESTS
+    public License getCC0() {
+        String shortDescription = "You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.";
+        URI uri = URI.create("https://creativecommons.org/publicdomain/zero/1.0/");
+        URI iconUrl = URI.create("/resources/images/cc0.png");
+        License license = new edu.harvard.iq.dataverse.License("CC0", shortDescription, uri, iconUrl, true);
+        return license;
+    }
+
+    public void clearCustomTermsVariables(){
+        termsOfUse = null;
+        confidentialityDeclaration = null;
+        specialPermissions = null;
+        restrictions = null;
+        citationRequirements = null;
+        depositorRequirements = null;
+        conditions = null;
+        disclaimer = null;
     }
     
-        /**
+    /**
      * @todo What does the GUI use for a default license? What does the "native"
      * API use? See also https://github.com/IQSS/dataverse/issues/1385
      */
-    public static TermsOfUseAndAccess.License defaultLicense = TermsOfUseAndAccess.License.CC0;
-    public static String CC0_URI = "https://creativecommons.org/publicdomain/zero/1.0/";
+    // TODO: FIX FOR MULTI-LICENSE
+    //public static TermsOfUseAndAccess.License defaultLicense = TermsOfUseAndAccess.License.CC0;
+
     @Override
     public int hashCode() {
         int hash = 0;

@@ -27,6 +27,7 @@ import edu.harvard.iq.dataverse.DataFileServiceBean;
 import edu.harvard.iq.dataverse.Dataset;
 import edu.harvard.iq.dataverse.DatasetVersion;
 import edu.harvard.iq.dataverse.FileMetadata;
+import edu.harvard.iq.dataverse.License;
 import edu.harvard.iq.dataverse.TermsOfUseAndAccess;
 import edu.harvard.iq.dataverse.dataaccess.DataAccess;
 import edu.harvard.iq.dataverse.dataaccess.ImageThumbConverter;
@@ -1475,8 +1476,10 @@ public class FileUtil implements java.io.Serializable  {
         }
         // 1. License and Terms of Use:
         if (datasetVersion.getTermsOfUseAndAccess() != null) {
-            if (!TermsOfUseAndAccess.License.CC0.equals(datasetVersion.getTermsOfUseAndAccess().getLicense())
-                    && !(datasetVersion.getTermsOfUseAndAccess().getTermsOfUse() == null
+            License license = datasetVersion.getTermsOfUseAndAccess().getLicense();
+// TODO: FIX FOR MULTI-LICENSE
+            if ( /*license == null || !TermsOfUseAndAccess.defaultLicense.equals(license.getName())
+                    &&*/ !(datasetVersion.getTermsOfUseAndAccess().getTermsOfUse() == null
                     || datasetVersion.getTermsOfUseAndAccess().getTermsOfUse().equals(""))) {
                 logger.fine("Download popup required because of license or terms of use.");
                 return true;
@@ -1513,8 +1516,9 @@ public class FileUtil implements java.io.Serializable  {
         }
         // 1. License and Terms of Use:
         if (datasetVersion.getTermsOfUseAndAccess() != null) {
-            if (!TermsOfUseAndAccess.License.CC0.equals(datasetVersion.getTermsOfUseAndAccess().getLicense())
-                    && !(datasetVersion.getTermsOfUseAndAccess().getTermsOfUse() == null
+// TODO: FIX FOR MULTI-LICENSE
+            if (/*!TermsOfUseAndAccess.defaultLicense.equals(datasetVersion.getTermsOfUseAndAccess().getLicense().getName())
+                    && */!(datasetVersion.getTermsOfUseAndAccess().getTermsOfUse() == null
                     || datasetVersion.getTermsOfUseAndAccess().getTermsOfUse().equals(""))) {
                 logger.fine("Download popup required because of license or terms of use.");
                 return true;

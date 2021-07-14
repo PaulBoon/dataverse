@@ -49,7 +49,6 @@ import edu.harvard.iq.dataverse.GlobalId;
 import edu.harvard.iq.dataverse.MetadataBlock;
 import edu.harvard.iq.dataverse.MetadataBlockServiceBean;
 import edu.harvard.iq.dataverse.TermsOfUseAndAccess;
-import edu.harvard.iq.dataverse.TermsOfUseAndAccess.License;
 import edu.harvard.iq.dataverse.DatasetVersion.VersionState;
 import edu.harvard.iq.dataverse.util.bagit.OREMap;
 
@@ -210,7 +209,8 @@ public class JSONLDUtil {
                                         "Cannot specify " + JsonLDTerm.schemaOrg("license").getUrl() + " and "
                                                 + JsonLDTerm.termsOfUse.getUrl());
                             }
-                            setSemTerm(terms, key, TermsOfUseAndAccess.defaultLicense);
+                            // TODO: get default terms from database
+                            //setSemTerm(terms, key, TermsOfUseAndAccess.defaultLicense);
                         } else {
                             throw new BadRequestException(
                                     "Can't append to a single-value field that already has a value: "
@@ -317,12 +317,13 @@ public class JSONLDUtil {
                     // Internal/non-metadatablock terms
                     boolean found=false;
                     if (key.equals(JsonLDTerm.schemaOrg("license").getUrl())) {
-                        if(jsonld.getString(key).equals(TermsOfUseAndAccess.CC0_URI)) {
-                            setSemTerm(terms, key, TermsOfUseAndAccess.License.NONE);
-                        } else {
-                            throw new BadRequestException(
-                                    "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
-                        }
+                        // TODO: FIND OUT THE INTENTION OF THIS CODE: IF CC0 THEN NONE ???
+//                        if(jsonld.getString(key).equals(TermsOfUseAndAccess.CC0_URI)) {
+//                            setSemTerm(terms, key, TermsOfUseAndAccess.License.NONE);
+//                        } else {
+//                            throw new BadRequestException(
+//                                    "Term: " + key + " with value: " + jsonld.getString(key) + " not found.");
+//                        }
                         found=true;
                     } else if (datasetTerms.contains(key)) {
                         if(!deleteIfSemTermMatches(terms, key, jsonld.get(key))) {
@@ -696,7 +697,7 @@ public class JSONLDUtil {
     public static boolean isSet(TermsOfUseAndAccess terms, String semterm) {
         switch (semterm) {
         case "http://schema.org/license":
-            return !terms.getLicense().equals(TermsOfUseAndAccess.License.NONE);
+            return terms.getLicense() != null;
         case "https://dataverse.org/schema/core#termsOfUse":
             return !StringUtils.isBlank(terms.getTermsOfUse());
         case "https://dataverse.org/schema/core#confidentialityDeclaration":
@@ -739,12 +740,13 @@ public class JSONLDUtil {
         switch (semterm) {
         case "http://schema.org/license":
             // Mirror rules from SwordServiceBean
-            if (((License) value).equals(TermsOfUseAndAccess.defaultLicense)) {
-                terms.setLicense(TermsOfUseAndAccess.defaultLicense);
-            } else {
-                throw new BadRequestException("The only allowed value for " + JsonLDTerm.schemaOrg("license").getUrl()
-                        + " is " + TermsOfUseAndAccess.CC0_URI);
-            }
+//            if (((License) value).equals(TermsOfUseAndAccess.defaultLicense)) {
+//                terms.setLicense(TermsOfUseAndAccess.defaultLicense);
+//            } else {
+//                throw new BadRequestException("The only allowed value for " + JsonLDTerm.schemaOrg("license").getUrl()
+//                        + " is " + TermsOfUseAndAccess.CC0_URI);
+//            }
+            // TODO: the value should be on the list of active licenses.
             break;
         case "https://dataverse.org/schema/core#termsOfUse":
             terms.setTermsOfUse((String) value);

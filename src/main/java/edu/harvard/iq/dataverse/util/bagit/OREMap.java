@@ -58,11 +58,11 @@ public class OREMap {
     public JsonObject getOREMap() throws Exception {
         return getOREMap(false);
     }
-    
+
     public JsonObject getOREMap(boolean aggregationOnly) throws Exception {
         return getOREMapBuilder(aggregationOnly).build();
     }
-    
+
     public JsonObjectBuilder getOREMapBuilder(boolean aggregationOnly) throws Exception {
 
         //Set this flag if it wasn't provided
@@ -156,9 +156,9 @@ public class OREMap {
         addIfNotNull(aggBuilder, JsonLDTerm.schemaOrg("datePublished"), dataset.getPublicationDateFormattedYYYYMMDD());
 
         TermsOfUseAndAccess terms = version.getTermsOfUseAndAccess();
-        if (terms.getLicense() == TermsOfUseAndAccess.License.CC0) {
+        if (terms.getLicense() != null) {
             aggBuilder.add(JsonLDTerm.schemaOrg("license").getLabel(),
-                    TermsOfUseAndAccess.CC0_URI);
+                    terms.getLicense().getUri().toString());
         } else {
             addIfNotNull(aggBuilder, JsonLDTerm.termsOfUse, terms.getTermsOfUse());
         }

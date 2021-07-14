@@ -16,16 +16,23 @@ import edu.harvard.iq.dataverse.DvObject;
 import edu.harvard.iq.dataverse.EMailValidator;
 import edu.harvard.iq.dataverse.EjbDataverseEngine;
 import edu.harvard.iq.dataverse.GlobalId;
-import edu.harvard.iq.dataverse.RoleAssignment;
+import edu.harvard.iq.dataverse.License;
+import edu.harvard.iq.dataverse.LicenseServiceBean;
 import edu.harvard.iq.dataverse.UserServiceBean;
 import edu.harvard.iq.dataverse.actionlogging.ActionLogRecord;
 import edu.harvard.iq.dataverse.api.dto.RoleDTO;
+import edu.harvard.iq.dataverse.authorization.AuthTestDataServiceBean;
 import edu.harvard.iq.dataverse.authorization.AuthenticatedUserDisplayInfo;
 import edu.harvard.iq.dataverse.authorization.AuthenticationProvider;
+import edu.harvard.iq.dataverse.authorization.AuthenticationProvidersRegistrationServiceBean;
+import edu.harvard.iq.dataverse.authorization.DataverseRole;
+import edu.harvard.iq.dataverse.authorization.RoleAssignee;
 import edu.harvard.iq.dataverse.authorization.UserIdentifier;
+import edu.harvard.iq.dataverse.authorization.UserRecordIdentifier;
 import edu.harvard.iq.dataverse.authorization.exceptions.AuthenticationProviderFactoryNotFoundException;
 import edu.harvard.iq.dataverse.authorization.exceptions.AuthorizationSetupException;
 import edu.harvard.iq.dataverse.authorization.groups.GroupServiceBean;
+import edu.harvard.iq.dataverse.authorization.groups.impl.explicit.ExplicitGroupServiceBean;
 import edu.harvard.iq.dataverse.authorization.providers.AuthenticationProviderRow;
 import edu.harvard.iq.dataverse.authorization.providers.builtin.BuiltinUser;
 import edu.harvard.iq.dataverse.authorization.providers.builtin.BuiltinUserServiceBean;
@@ -33,82 +40,75 @@ import edu.harvard.iq.dataverse.authorization.providers.shib.ShibAuthenticationP
 import edu.harvard.iq.dataverse.authorization.providers.shib.ShibServiceBean;
 import edu.harvard.iq.dataverse.authorization.providers.shib.ShibUtil;
 import edu.harvard.iq.dataverse.authorization.users.AuthenticatedUser;
+import edu.harvard.iq.dataverse.authorization.users.User;
 import edu.harvard.iq.dataverse.confirmemail.ConfirmEmailData;
 import edu.harvard.iq.dataverse.confirmemail.ConfirmEmailException;
 import edu.harvard.iq.dataverse.confirmemail.ConfirmEmailInitResponse;
 import edu.harvard.iq.dataverse.dataaccess.DataAccess;
 import edu.harvard.iq.dataverse.dataaccess.DataAccessOption;
-import edu.harvard.iq.dataverse.dataaccess.StorageIO;
-import edu.harvard.iq.dataverse.engine.command.impl.AbstractSubmitToArchiveCommand;
-import edu.harvard.iq.dataverse.engine.command.impl.PublishDataverseCommand;
-import edu.harvard.iq.dataverse.settings.Setting;
-import javax.json.Json;
-import javax.json.JsonArrayBuilder;
-import javax.json.JsonObjectBuilder;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.core.Response;
-import static edu.harvard.iq.dataverse.util.json.NullSafeJsonBuilder.jsonObjectBuilder;
-import static edu.harvard.iq.dataverse.util.json.JsonPrinter.*;
-
-import java.io.InputStream;
-import java.io.StringReader;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Response.Status;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-
-import java.util.List;
-import edu.harvard.iq.dataverse.authorization.AuthTestDataServiceBean;
-import edu.harvard.iq.dataverse.authorization.AuthenticationProvidersRegistrationServiceBean;
-import edu.harvard.iq.dataverse.authorization.DataverseRole;
-import edu.harvard.iq.dataverse.authorization.RoleAssignee;
-import edu.harvard.iq.dataverse.authorization.UserRecordIdentifier;
-import edu.harvard.iq.dataverse.authorization.groups.impl.explicit.ExplicitGroupServiceBean;
-import edu.harvard.iq.dataverse.authorization.users.User;
 import edu.harvard.iq.dataverse.dataaccess.ImageThumbConverter;
+import edu.harvard.iq.dataverse.dataaccess.StorageIO;
 import edu.harvard.iq.dataverse.dataset.DatasetThumbnail;
 import edu.harvard.iq.dataverse.dataset.DatasetUtil;
 import edu.harvard.iq.dataverse.engine.command.DataverseRequest;
 import edu.harvard.iq.dataverse.engine.command.exception.CommandException;
+import edu.harvard.iq.dataverse.engine.command.impl.AbstractSubmitToArchiveCommand;
 import edu.harvard.iq.dataverse.engine.command.impl.DeactivateUserCommand;
 import edu.harvard.iq.dataverse.engine.command.impl.DeleteRoleCommand;
+import edu.harvard.iq.dataverse.engine.command.impl.PublishDataverseCommand;
 import edu.harvard.iq.dataverse.engine.command.impl.RegisterDvObjectCommand;
 import edu.harvard.iq.dataverse.ingest.IngestServiceBean;
+import edu.harvard.iq.dataverse.settings.Setting;
 import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.userdata.UserListMaker;
 import edu.harvard.iq.dataverse.userdata.UserListResult;
 import edu.harvard.iq.dataverse.util.ArchiverUtil;
 import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.util.FileUtil;
-import java.io.IOException;
-import java.io.OutputStream;
+import edu.harvard.iq.dataverse.util.json.JsonPrinter;
+import org.apache.commons.io.IOUtils;
 
+import javax.ejb.EJB;
+import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonReader;
+import javax.persistence.Query;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.function.Consumer;
-import javax.inject.Inject;
-import javax.json.JsonArray;
-import javax.persistence.Query;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.StreamingOutput;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static edu.harvard.iq.dataverse.util.json.JsonPrinter.json;
+import static edu.harvard.iq.dataverse.util.json.JsonPrinter.rolesToJson;
+import static edu.harvard.iq.dataverse.util.json.JsonPrinter.toJsonArray;
+import static edu.harvard.iq.dataverse.util.json.NullSafeJsonBuilder.jsonObjectBuilder;
 
 /**
  * Where the secure, setup API calls live.
@@ -153,7 +153,8 @@ public class Admin extends AbstractApiBean {
         ExplicitGroupServiceBean explicitGroupService;
         @EJB
         BannerMessageServiceBean bannerMessageService;
-        
+        @EJB
+        LicenseServiceBean licenseService;
 
 	// Make the session available
 	@Inject
@@ -925,7 +926,7 @@ public class Admin extends AbstractApiBean {
 			return error(Response.Status.INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 	}
-        
+
     @DELETE
     @Path("roles/{id}")
     public Response deleteRole(@PathParam("id") String id) {
@@ -1969,4 +1970,79 @@ public class Admin extends AbstractApiBean {
 
     }
     
+    @GET
+    @Path("/licenses")
+    public Response getLicenses() {
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+        for(License license : licenseService.listAll()) {
+            arrayBuilder.add(JsonPrinter.json(license));
+        }
+        return ok(arrayBuilder);
+    }
+
+    @GET
+    @Path("/licenses/{id}")
+    public Response getLicenseById(@PathParam("id") long id) {
+        try {
+            License license = licenseService.getById(id);
+            return ok(json(license));
+        } catch (FetchException e) {
+            return error(Response.Status.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    @POST
+    @Path("/licenses")
+    public Response addLicense(License license) {
+        try {
+            licenseService.save(license);
+            return created("/api/admin/licenses", Json.createObjectBuilder().add("message", "License created"));
+        } catch (RequestBodyException e) {
+            return error(Response.Status.BAD_REQUEST, e.getMessage());
+        } catch(ConflictException e) {
+            return error(Response.Status.CONFLICT, e.getMessage());
+        }
+    }
+
+    // TODO: GET /licenses/default
+
+    @PUT
+    @Path("/licenses/default")
+    public Response setDefault(long id) {
+        try {
+            licenseService.setDefault(id);
+            return ok("Default license ID set to " + id);
+        }
+        catch (UpdateException | FetchException e) {
+            return error(Status.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+        catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        }
+    }
+
+    @PUT
+    @Path("/licenses/{id}")
+    public Response putLicenseById(@PathParam("id") long id, License license) {
+        try {
+            licenseService.setById(id, license.getName(), license.getShortDescription(), license.getUri(), license.getIconUrl(), license.isActive());
+        } catch (UpdateException e) {
+            return error(Response.Status.BAD_REQUEST, e.getMessage());
+        }
+        return ok("License with ID " + id + " was replaced.");
+    }
+
+    @DELETE
+    @Path("/licenses/{id}")
+    public Response deleteLicenseById(@PathParam("id") long id) {
+        try {
+            int result = licenseService.deleteById(id);
+            if (result == 1) {
+                return ok("OK. License with ID " + id + " was deleted.");
+            }
+            return error(Response.Status.NOT_FOUND, "License with ID " + id + " not found");
+        } catch(ConflictException e) {
+            return error(Response.Status.CONFLICT, e.getMessage());
+        }
+    }
 }
