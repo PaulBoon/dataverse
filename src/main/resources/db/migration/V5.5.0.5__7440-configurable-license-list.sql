@@ -11,15 +11,15 @@ BEGIN
   END;
 
   BEGIN
-      INSERT INTO license (uri, name, shortdescription, active, isDefault, iconurl) VALUES ('http://creativecommons.org/publicdomain/zero/1.0', 'CC0','You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.',true, true, '/resources/images/cc0.png');
+    INSERT INTO license (uri, name, shortdescription, active, isDefault, iconurl) VALUES ('http://creativecommons.org/publicdomain/zero/1.0', 'CC0','You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.',true, true, '/resources/images/cc0.png');
   EXCEPTION
     WHEN duplicate_object THEN RAISE NOTICE 'CC0 has already been added to the license table';
   END;
 
   BEGIN
-      UPDATE termsofuseandaccess
-      SET license_id = (SELECT license.id FROM license WHERE license.name = 'CC0')
-      WHERE termsofuseandaccess.license = 'CC0' AND termsofuseandaccess.license_id IS NULL;
+    UPDATE termsofuseandaccess
+    SET license_id = (SELECT license.id FROM license WHERE license.name = 'CC0')
+    WHERE termsofuseandaccess.license = 'CC0' AND termsofuseandaccess.license_id IS NULL;
   EXCEPTION
     WHEN undefined_column THEN RAISE NOTICE 'No column "license" found, no licenses to migrate';
   END;
