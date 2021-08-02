@@ -761,7 +761,7 @@ public class Datasets extends AbstractApiBean {
             return error(Status.BAD_REQUEST, "Error parsing Json: " + jpe.getMessage());
         }
     }
-    
+
     @PUT
     @Path("{id}/deleteMetadata")
     public Response deleteVersionMetadata(String jsonBody, @PathParam("id") String id) throws WrappedResponse {

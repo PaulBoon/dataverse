@@ -85,7 +85,7 @@ public class DatasetVersion implements Serializable {
     // StudyVersionsFragment.xhtml in order to display the correct value from a Resource Bundle
     public enum VersionState {
         DRAFT, RELEASED, ARCHIVED, DEACCESSIONED
-    };
+    }
 
     public enum License {
         NONE, CC0
@@ -1869,9 +1869,8 @@ public class DatasetVersion implements Serializable {
         if (terms != null) {
             JsonObjectBuilder license = Json.createObjectBuilder().add("@type", "Dataset");
 
-// TODO: FIX FOR MULTI-LICENSE (CHECK IF THIS SOLUTION IS OK)
             if (terms.getLicense() != null) {
-                license.add("text", terms.getLicense().getName()).add("url", terms.getLicense().getUri().toString());
+                license.add("name", terms.getLicense().getName()).add("url", terms.getLicense().getUri().toString());
             } else {
                 String termsOfUse = terms.getTermsOfUse();
                 // Terms of use can be null if you create the dataset with JSON.
@@ -1957,10 +1956,10 @@ public class DatasetVersion implements Serializable {
             job.add("distribution", fileArray);
         }
         jsonLd = job.build().toString();
-        
+
         //Most fields above should be stripped/sanitized but, since this is output in the dataset page as header metadata, do a final sanitize step to make sure
         jsonLd = MarkupChecker.stripAllTags(jsonLd);
-        
+
         return jsonLd;
     }
 
