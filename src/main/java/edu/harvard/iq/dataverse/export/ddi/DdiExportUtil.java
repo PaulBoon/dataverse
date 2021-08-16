@@ -27,6 +27,8 @@ import static edu.harvard.iq.dataverse.export.DDIExportServiceBean.NOTE_SUBJECT_
 import static edu.harvard.iq.dataverse.export.DDIExportServiceBean.NOTE_TYPE_TAG;
 import static edu.harvard.iq.dataverse.export.DDIExportServiceBean.NOTE_TYPE_UNF;
 import edu.harvard.iq.dataverse.export.DDIExporter;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
+
 import static edu.harvard.iq.dataverse.util.SystemConfig.FQDN;
 import static edu.harvard.iq.dataverse.util.SystemConfig.SITE_URL;
 import edu.harvard.iq.dataverse.util.json.JsonUtil;
@@ -55,6 +57,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.w3c.dom.Document;
+import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.DOMException;
 
 // For write operation
@@ -79,8 +82,8 @@ public class DdiExportUtil {
 
     public static final String LEVEL_DV = "dv";
 
-    @EJB
-    VariableServiceBean variableService;
+    
+    static SettingsServiceBean settingsService;
     
     public static final String NOTE_TYPE_CONTENTTYPE = "DATAVERSE:CONTENTTYPE";
     public static final String NOTE_SUBJECT_CONTENTTYPE = "Content/MIME Type";
@@ -161,6 +164,16 @@ public class DdiExportUtil {
         DatasetVersionDTO version = datasetDto.getDatasetVersion();
         String persistentProtocol = datasetDto.getProtocol();
         String persistentAgency = persistentProtocol;
+
+        String persistentAuthority = datasetDto.getAuthority();
+        String persistentId = datasetDto.getIdentifier();
+
+        String pid = persistentProtocol + ":" + persistentAuthority + "/" + persistentId;
+        String pidUri = pid;
+        //Some tests don't send real PIDs - don't try to get their URL form
+        if(!pidUri.equals("null:null/null")) {
+            pidUri= new GlobalId(persistentProtocol + ":" + persistentAuthority + "/" + persistentId).toURL().toString();
+        }
         // The "persistentAgency" tag is used for the "agency" attribute of the 
         // <IDNo> ddi section; back in the DVN3 days we used "handle" and "DOI" 
         // for the 2 supported protocols, respectively. For the sake of backward
@@ -171,8 +184,6 @@ public class DdiExportUtil {
             persistentAgency = "DOI";
         }
         
-        String persistentAuthority = datasetDto.getAuthority();
-        String persistentId = datasetDto.getIdentifier();       
         //docDesc Block
         writeDocDescElement (xmlw, datasetDto);
         //stdyDesc Block
@@ -186,7 +197,9 @@ public class DdiExportUtil {
         
         xmlw.writeStartElement("IDNo");
         writeAttribute(xmlw, "agency", persistentAgency);
-        xmlw.writeCharacters(persistentProtocol + ":" + persistentAuthority + "/" + persistentId);
+        
+        
+        xmlw.writeCharacters(pid);
         xmlw.writeEndElement(); // IDNo
         writeOtherIdElement(xmlw, version);
         xmlw.writeEndElement(); // titlStmt
@@ -195,7 +208,19 @@ public class DdiExportUtil {
         writeProducersElement(xmlw, version);
         
         xmlw.writeStartElement("distStmt");
-        if (datasetDto.getPublisher() != null && !datasetDto.getPublisher().equals("")) {
+      //The default is to add Dataverse Repository as a distributor. The excludeinstallationifset setting turns that off if there is a distributor defined in the metadata
+        boolean distributorSet=false;
+        MetadataBlockDTO citationDTO= version.getMetadataBlocks().get("citation");
+        if(citationDTO!=null) {
+            if(citationDTO.getField(DatasetFieldConstant.distributor)!=null) {
+                distributorSet=true;
+            }
+        }
+        logger.info("Dsitr set?: " + distributorSet);
+        logger.info("Pub?: " + datasetDto.getPublisher());
+        boolean excludeRepository = settingsService.isTrueForKey(SettingsServiceBean.Key.ExportInstallationAsDistributorOnlyWhenNotSet, false);
+        logger.info("Exclude: " + excludeRepository);
+        if (!StringUtils.isEmpty(datasetDto.getPublisher()) && !(excludeRepository && distributorSet)) {
             xmlw.writeStartElement("distrbtr");
             writeAttribute(xmlw, "source", "archive");
             xmlw.writeCharacters(datasetDto.getPublisher());
@@ -210,7 +235,10 @@ public class DdiExportUtil {
         xmlw.writeEndElement(); // diststmt
 
         writeSeriesElement(xmlw, version);
-
+        xmlw.writeStartElement("holdings");
+        writeAttribute(xmlw, "URI", pidUri);
+        xmlw.writeEndElement(); //holdings
+        
         xmlw.writeEndElement(); // citation
         //End Citation Block
         
@@ -308,7 +336,8 @@ public class DdiExportUtil {
         xmlw.writeEndElement(); // IDNo
         xmlw.writeEndElement(); // titlStmt
         xmlw.writeStartElement("distStmt");
-        if (datasetDto.getPublisher() != null && !datasetDto.getPublisher().equals("")) {
+        //The doc is always published by the Dataverse Repository
+        if (!StringUtils.isEmpty(datasetDto.getPublisher())) {
             xmlw.writeStartElement("distrbtr");
             writeAttribute(xmlw, "source", "archive");
             xmlw.writeCharacters(datasetDto.getPublisher());
@@ -1388,6 +1417,17 @@ public class DdiExportUtil {
         for (FileMetadata fileMetadata : datasetVersion.getFileMetadatas()) {
             DataFile dataFile = fileMetadata.getDataFile();
 
+            /**
+             * Previously (in Dataverse 5.3 and below) the dataDscr section was
+             * included for restricted files but that meant that summary
+             * statistics were exposed. (To get at these statistics, API users
+             * should instead use the "Data Variable Metadata Access" endpoint.)
+             * These days we skip restricted files to avoid this exposure.
+             */
+            if (dataFile.isRestricted()) {
+                continue;
+            }
+
             if (dataFile != null && dataFile.isTabularData()) {
                 if (!tabularData) {
                     xmlw.writeStartElement("dataDscr");
@@ -1782,6 +1822,10 @@ public class DdiExportUtil {
             logger.info("I/O error " + ioe.getMessage());
         }
 
+    }
+
+    public static void injectSettingsService(SettingsServiceBean settingsSvc) {
+        settingsService=settingsSvc;
     }
 
 }

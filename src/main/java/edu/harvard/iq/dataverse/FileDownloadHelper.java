@@ -143,14 +143,6 @@ public class FileDownloadHelper implements java.io.Serializable {
             fileDownloadService.writeGuestbookResponseRecord(guestbookResponse);
     }
 
-    public String startWorldMapDownloadLink(GuestbookResponse guestbookResponse, FileMetadata fmd){
-         
-        guestbookResponse.setDownloadtype("WorldMap");
-        String retVal = fileDownloadService.startWorldMapDownloadLink(guestbookResponse, fmd);
-        PrimeFaces.current().executeScript("PF('downloadPopup').hide()");
-        return retVal;
-    }
-
      /**
       * Writes a guestbook entry for either popup scenario: guestbook or terms.
       */
@@ -198,12 +190,6 @@ public class FileDownloadHelper implements java.io.Serializable {
      *  WARNING: Before calling this, make sure the user has download
      *  permission for the file!!  (See DatasetPage.canDownloadFile())
      * 
-     * Should there be a Explore WorldMap Button for this file?
-     *   See table in: https://github.com/IQSS/dataverse/issues/1618
-     * 
-     *  (1) Does the file have MapLayerMetadata?
-     *  (2) Are the proper settings in place
-     * 
      * @param  fileMetadata
      * @return boolean
      */
@@ -219,7 +205,7 @@ public class FileDownloadHelper implements java.io.Serializable {
         Long fid = fileMetadata.getId();
         //logger.info("calling candownloadfile on filemetadata "+fid);
         // Note that `isRestricted` at the FileMetadata level is for expressing intent by version. Enforcement is done with `isRestricted` at the DataFile level.
-        boolean isRestrictedFile = fileMetadata.isRestricted();
+        boolean isRestrictedFile = fileMetadata.isRestricted() || fileMetadata.getDataFile().isRestricted();
         
         // Has this file been checked? Look at the DatasetPage hash
         if (this.fileDownloadPermissionMap.containsKey(fid)){
@@ -343,6 +329,9 @@ public class FileDownloadHelper implements java.io.Serializable {
 
          if (fileDownloadService.requestAccess(file.getId())) {
              // update the local file object so that the page properly updates
+             if(file.getFileAccessRequesters() == null){
+                 file.setFileAccessRequesters(new ArrayList());
+             }
              file.getFileAccessRequesters().add((AuthenticatedUser) session.getUser());
              // create notification if necessary
              if (sendNotification) {

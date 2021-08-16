@@ -19,6 +19,7 @@ import edu.harvard.iq.dataverse.export.ExportService;
 import edu.harvard.iq.dataverse.harvest.server.OAIRecordServiceBean;
 import edu.harvard.iq.dataverse.search.IndexServiceBean;
 import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
+import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.util.SystemConfig;
 import edu.harvard.iq.dataverse.workflows.WorkflowComment;
 import java.io.File;
@@ -48,7 +49,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.StoredProcedureQuery;
 import javax.persistence.TypedQuery;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.ocpsoft.common.util.Strings;
 
 /**
@@ -148,6 +149,14 @@ public class DatasetServiceBean implements java.io.Serializable {
             }
             return retList;
         }
+    }
+
+    public List<Dataset> findByCreatorId(Long creatorId) {
+        return em.createNamedQuery("Dataset.findByCreatorId").setParameter("creatorId", creatorId).getResultList();
+    }
+
+    public List<Dataset> findByReleaseUserId(Long releaseUserId) {
+        return em.createNamedQuery("Dataset.findByReleaseUserId").setParameter("releaseUserId", releaseUserId).getResultList();
     }
 
     public List<Dataset> filterByPidQuery(String filterQuery) {
@@ -264,8 +273,8 @@ public class DatasetServiceBean implements java.io.Serializable {
         switch (identifierType) {
             case "randomString":
                 return generateIdentifierAsRandomString(dataset, idServiceBean, shoulder);
-            case "sequentialNumber":
-                return generateIdentifierAsSequentialNumber(dataset, idServiceBean, shoulder);
+            case "storedProcGenerated":
+                return generateIdentifierFromStoredProcedure(dataset, idServiceBean, shoulder);
             default:
                 /* Should we throw an exception instead?? -- L.A. 4.6.2 */
                 return generateIdentifierAsRandomString(dataset, idServiceBean, shoulder);
@@ -281,19 +290,19 @@ public class DatasetServiceBean implements java.io.Serializable {
         return identifier;
     }
 
-    private String generateIdentifierAsSequentialNumber(Dataset dataset, GlobalIdServiceBean idServiceBean, String shoulder) {
+    private String generateIdentifierFromStoredProcedure(Dataset dataset, GlobalIdServiceBean idServiceBean, String shoulder) {
         
         String identifier; 
         do {
-            StoredProcedureQuery query = this.em.createNamedStoredProcedureQuery("Dataset.generateIdentifierAsSequentialNumber");
+            StoredProcedureQuery query = this.em.createNamedStoredProcedureQuery("Dataset.generateIdentifierFromStoredProcedure");
             query.execute();
-            Integer identifierNumeric = (Integer) query.getOutputParameterValue(1); 
+            String identifierFromStoredProcedure = (String) query.getOutputParameterValue(1);
             // some diagnostics here maybe - is it possible to determine that it's failing 
             // because the stored procedure hasn't been created in the database?
-            if (identifierNumeric == null) {
+            if (identifierFromStoredProcedure == null) {
                 return null; 
             }
-            identifier = shoulder + identifierNumeric.toString();
+            identifier = shoulder + identifierFromStoredProcedure;
         } while (!isIdentifierLocallyUnique(identifier, dataset));
         
         return identifier;
@@ -719,6 +728,36 @@ public class DatasetServiceBean implements java.io.Serializable {
 
     }
     
+    //get a string to add to save success message
+    //depends on dataset state and user privleges
+    public String getReminderString(Dataset dataset, boolean canPublishDataset) {
+
+        String reminderString;
+
+        if(!dataset.isReleased() ){
+            //messages for draft state.
+            if (canPublishDataset){
+                reminderString = BundleUtil.getStringFromBundle("dataset.message.publish.remind.draft");
+            } else {
+                reminderString = BundleUtil.getStringFromBundle("dataset.message.submit.remind.draft");
+            }            
+        } else{
+            //messages for new version - post-publish
+            if (canPublishDataset){
+                reminderString = BundleUtil.getStringFromBundle("dataset.message.publish.remind.version");
+            } else {
+                reminderString = BundleUtil.getStringFromBundle("dataset.message.submit.remind.version");
+            }           
+        }             
+
+        if (reminderString != null) {
+            return reminderString;
+        } else {
+            logger.warning("Unable to get reminder string from bundle. Returning empty string.");
+            return "";
+        }
+    }
+    
     public void updateLastExportTimeStamp(Long datasetId) {
         Date now = new Date();
         em.createNativeQuery("UPDATE Dataset SET lastExportTime='"+now.toString()+"' WHERE id="+datasetId).executeUpdate();
@@ -786,6 +825,12 @@ public class DatasetServiceBean implements java.io.Serializable {
         em.persist(workflowComment);
         return workflowComment;
     }
+    
+    public void markWorkflowCommentAsRead(WorkflowComment workflowComment) {
+        workflowComment.setToBeShown(false);
+        em.merge(workflowComment);
+    }
+    
     
     /**
      * This method used to throw CommandException, which was pretty pointless 
@@ -963,7 +1008,7 @@ public class DatasetServiceBean implements java.io.Serializable {
             // (i.e., the metadata exports):
             StorageIO<Dataset> datasetSIO = DataAccess.getStorageIO(dataset);
             
-            for (String[] exportProvider : ExportService.getInstance(settingsService).getExportersLabels()) {
+            for (String[] exportProvider : ExportService.getInstance().getExportersLabels()) {
                 String exportLabel = "export_" + exportProvider[1] + ".cached";
                 try {
                     total += datasetSIO.getAuxObjectSize(exportLabel);
