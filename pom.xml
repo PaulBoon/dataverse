@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <!--
     If you are doing more than bumping the version number, please read
@@ -7,7 +7,7 @@
     -->
     <groupId>edu.harvard.iq</groupId>
     <artifactId>dataverse</artifactId>
-    <version>4.20</version>
+    <version>5.6</version>
     <packaging>war</packaging>
     <name>dataverse</name>
     <properties>
@@ -23,21 +23,25 @@
             This seems to play well with NetBeans 8.2, IDEA 2018.1 and mvn including compatibility with JaCoCo.
         -->
         <argLine>-Duser.timezone=${project.timezone} -Dfile.encoding=${project.build.sourceEncoding} -Duser.language=${project.language} -Duser.region=${project.region}</argLine>
-        <aws.version>1.11.172</aws.version>
-        <jackson.version>2.9.6</jackson.version>
+        <skipUnitTests>false</skipUnitTests>
+    
+        <jakartaee-api.version>8.0.0</jakartaee-api.version>
+        <payara.version>5.2021.5</payara.version>
+        <postgresql.version>42.2.19</postgresql.version>
+        <aws.version>1.11.762</aws.version>
         <commons.logging.version>1.2</commons.logging.version>
-        <httpcomponents.client.version>4.5.5</httpcomponents.client.version>
-        <junit.version>4.12</junit.version>
-        <junit.jupiter.version>5.5.2</junit.jupiter.version>
+        <commons.lang3.version>3.12.0</commons.lang3.version>
+        <httpcomponents.client.version>4.5.13</httpcomponents.client.version>
+        <google.cloud.version>0.157.0</google.cloud.version>
+        <junit.version>4.13.1</junit.version>
+        <junit.jupiter.version>5.7.0</junit.jupiter.version>
         <junit.vintage.version>${junit.jupiter.version}</junit.vintage.version>
+        <testcontainers.version>1.15.0</testcontainers.version>
+        <microbean-mpconfig.version>0.4.1</microbean-mpconfig.version>
         <mockito.version>2.28.2</mockito.version>
         <flyway.version>5.2.4</flyway.version>
         <jhove.version>1.20.1</jhove.version>
-        <!--
-        Jacoco 0.8.2 seems to break Netbeans code coverage integration so we'll use 0.8.1 instead.
-        See https://github.com/jacoco/jacoco/issues/772 for discussion of how the XML changed.
-        -->
-        <jacoco.version>0.8.1</jacoco.version>
+        <jacoco.version>0.8.6</jacoco.version>
     </properties>
     <pluginRepositories>
         <pluginRepository>
@@ -53,9 +57,32 @@
             </releases>
         </pluginRepository>
     </pluginRepositories>
-    <!--Maven checks for dependendies from these repos in the order shown in the pom.xml
+    <!--Maven checks for dependencies from these repos in the order shown in the pom.xml
         This isn't well documented and seems to change between maven versions -MAD 4.9.4 -->
     <repositories>
+        <repository>
+            <id>payara-nexus-artifacts</id>
+            <name>Payara Nexus Artifacts</name>
+            <url>https://nexus.payara.fish/repository/payara-artifacts</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <!-- This repository is about to being phased out. See https://github.com/payara/Payara_PatchedProjects/issues/366 -->
+        <repository>
+            <id>payara-patched-externals</id>
+            <name>Payara Patched Externals</name>
+            <url>https://raw.github.com/payara/Payara_PatchedProjects/master</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
         <repository>
             <id>central-repo</id>
             <name>Central Repository</name>
@@ -89,6 +116,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>fish.payara.api</groupId>
+                <artifactId>payara-bom</artifactId>
+                <version>${payara.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-bom</artifactId>
                 <version>${aws.version}</version>
@@ -96,26 +130,38 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
-                <artifactId>jackson-bom</artifactId>
-                <version>${jackson.version}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-            <dependency>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
                 <version>${commons.logging.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons.lang3.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
                 <version>${httpcomponents.client.version}</version>
             </dependency>
+            <dependency>
+              <groupId>com.google.cloud</groupId>
+              <artifactId>google-cloud-bom</artifactId>
+              <version>${google.cloud.version}</version>
+              <type>pom</type>
+              <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <!-- Declare any DIRECT dependencies here.
-         In case the depency is both transitive and direct (e. g. some common lib for logging),
+         In case the dependency is both transitive and direct (e. g. some common lib for logging),
          manage the version above and add the direct dependency here WITHOUT version tag, too.
     -->
     <!-- TODO: Housekeeping is utterly needed. -->
@@ -126,34 +172,22 @@
             <version>1.1.0</version>
         </dependency>
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <version>${junit.vintage.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-library</artifactId>
-            <version>2.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.glassfish</groupId>
             <artifactId>javax.json</artifactId>
-            <version>1.0.4</version>
+            <version>1.1.4</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.skyscreamer</groupId>
+            <artifactId>jsonassert</artifactId>
+            <version>1.5.0</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.vaadin.external.google</groupId>
+                    <artifactId>android-json</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -194,10 +228,13 @@
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <!-- Once on Eclipse Glassfish 5.1 or Payara 5.x, this should be changed to aws-java-sdk-s3,
-                 rendering the WAR much lighter. The version tag needs to be removed then, too. -->
-            <artifactId>aws-java-sdk-bundle</artifactId>
-            <version>${aws.version}</version>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <!-- no version here as managed by BOM above! -->
+        </dependency>
+        <dependency>
+          <groupId>com.apicatalog</groupId>
+          <artifactId>titanium-json-ld</artifactId>
+          <version>0.8.6</version>
         </dependency>
         <dependency>
             <!-- required by org.swordapp.server.sword2-server -->
@@ -221,7 +258,7 @@
             <!-- a dependency of commons-fileupload, but newer version required by tika -->
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.6</version>
+            <version>2.7</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -229,15 +266,17 @@
             <version>2.2.4</version>
             <scope>compile</scope>
         </dependency>
-        <!-- Should be refactored and removed once on Java EE 8 -->
+        <!-- Should be refactored and moved to transitive section above once on Java EE 8 (makes WAR smaller) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
+            <scope>provided</scope>
         </dependency>
-        <!-- Should be refactored and removed once on Java EE 8 -->
+        <!-- Should be refactored and moved to transitive section above once on Java EE 8 (makes WAR smaller) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <!-- required by org.swordapp.server.sword2-server -->
@@ -259,6 +298,11 @@
             <version>0.3m</version>
         </dependency>
         <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
             <version>${flyway.version}</version>
@@ -266,25 +310,34 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>16.0.1</version>
+            <version>29.0-jre</version>
             <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
-            <version>7.0</version>
+            <groupId>org.eclipse.microprofile.config</groupId>
+            <artifactId>microprofile-config-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-web-api</artifactId>
-            <version>7.0</version>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+            <version>${jakartaee-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.faces</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.primefaces</groupId>
             <artifactId>primefaces</artifactId>
-            <version>7.0</version>
+            <version>10.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.primefaces.themes</groupId>
@@ -292,29 +345,33 @@
             <version>1.0.10</version>
         </dependency>
         <dependency>
-            <groupId>org.atmosphere</groupId>
-            <artifactId>atmosphere-runtime</artifactId>
-            <version>2.4.2</version>
-        </dependency>
-        <dependency>
             <groupId>org.omnifaces</groupId>
             <artifactId>omnifaces</artifactId>
-            <version>1.7</version> <!-- Or 1.8-SNAPSHOT -->
+            <version>3.8</version> <!-- Or 1.8-SNAPSHOT -->
         </dependency>
         <dependency>
-            <groupId>org.hibernate</groupId>
+            <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
-            <version>5.0.3.Final</version>
+        </dependency>
+      <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.el</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <!-- Some utils from commons.lang have been moved to commons-text (especially escapeHtml()) -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.9</version>
         </dependency>
         <dependency>
             <groupId>org.apache.solr</groupId>
             <artifactId>solr-solrj</artifactId>
-            <version>7.7.2</version>
+            <version>8.8.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -424,12 +481,6 @@
             <artifactId>jsoup</artifactId>
             <version>1.11.3</version>
         </dependency>
-        <dependency>
-            <groupId>com.jayway.restassured</groupId>
-            <artifactId>rest-assured</artifactId>
-            <version>2.4.0</version>
-            <scope>test</scope>
-        </dependency>
         <!-- Added specific versionf of SLF4J jars; otherwise we end up with
         conflicting versions of slf4j-api and slf4j-log4j12, loaded as
         dependencies for different packages; which was causing some incompatibility
@@ -444,29 +495,12 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.7.7</version>
         </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
-        </dependency>
         <!-- Added for DataCite -->
         <!--dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.6.1</version>
         </dependency -->
-        <dependency>
-            <groupId>axis</groupId>
-            <artifactId>axis</artifactId>
-            <version>1.4</version>
-        </dependency>
         <dependency>
             <groupId>io.searchbox</groupId>
             <artifactId>jest</artifactId>
@@ -488,11 +522,6 @@
             <artifactId>commons-csv</artifactId>
             <version>1.2</version>
         </dependency>
-        <dependency>
-            <groupId>net.sf.ehcache</groupId>
-            <artifactId>ehcache</artifactId>
-            <version>2.10.1</version>
-        </dependency>
         <!-- OAuth2 authentication. -->
         <dependency>
             <groupId>com.github.scribejava</groupId>
@@ -503,7 +532,7 @@
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>oauth2-oidc-sdk</artifactId>
-            <version>6.18</version>
+            <version>9.9.1</version>
         </dependency>
         <!-- EXPERIMENTAL: -->
         <!-- lyncode xoai OAI-PMH implementation: -->
@@ -600,13 +629,83 @@
         <dependency>
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-parsers</artifactId>
-            <version>1.22</version>
+            <version>1.24.1</version>
         </dependency>
         <!-- Named Entity Recognition -->
         <dependency>
             <groupId>org.apache.opennlp</groupId>
             <artifactId>opennlp-tools</artifactId>
             <version>1.9.1</version>
+        </dependency>
+        <dependency>
+          <groupId>com.google.cloud</groupId>
+          <artifactId>google-cloud-storage</artifactId>
+        </dependency>
+        
+        
+        <!-- TESTING DEPENDENCIES -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${junit.vintage.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-library</artifactId>
+            <version>2.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>2.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.microbean</groupId>
+            <artifactId>microbean-microprofile-config</artifactId>
+            <version>${microbean-mpconfig.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
@@ -643,6 +742,8 @@
                     <include>**/*.xml</include>
                     <include>**/firstNames/*.*</include>
                     <include>**/*.xsl</include>
+                    <include>**/*.properties</include>
+                    <include>**/services/*</include>
                 </includes>
             </resource>
         </resources>
@@ -716,47 +817,14 @@
             <plugin>
                 <groupId>org.eluder.coveralls</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.0.0</version>
-            </plugin>
-            <!-- v4.8: The truezip-maven-plugin below deletes two copies of a file that the AWS SDK bundle
-            includes called javamail.providers which breaks system emails. - bsilverstein 8/8/2017 -->
-            <!-- Once on Eclipse Glassfish 5.1 or Payara 5.x and changing to aws-java-sdk-s3, this can be deleted. -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>truezip-maven-plugin</artifactId>
-                <version>1.1</version>
-                <executions>
-                    <execution>
-                        <id>remove-javamail-providers-from-exploded</id>
-                        <goals>
-                            <goal>remove</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <fileset>
-                                <directory>target/dataverse-${project.version}/WEB-INF/lib/aws-java-sdk-bundle-${aws.version}.jar/META-INF</directory>
-                                <includes>
-                                    <include>javamail.providers</include>
-                                </includes>
-                            </fileset>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>remove-javamail-providers-from-war</id>
-                        <goals>
-                            <goal>remove</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <fileset>
-                                <directory>target/dataverse-${project.version}.war/WEB-INF/lib/aws-java-sdk-bundle-${aws.version}.jar/META-INF</directory>
-                                <includes>
-                                    <include>javamail.providers</include>
-                                </includes>
-                            </fileset>
-                        </configuration>
-                    </execution>
-                </executions>
+                <version>4.3.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                        <version>2.3.1</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <!-- https://stackoverflow.com/questions/46177921/how-to-run-unit-tests-in-excludedgroups-in-maven -->
@@ -765,17 +833,25 @@
                 <configuration>
                     <!-- testsToExclude come from the profile-->
                     <excludedGroups>${testsToExclude}</excludedGroups>
+                    <skip>${skipUnitTests}</skip>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.1.2</version>
                 <configuration>
                     <configLocation>checkstyle.xml</configLocation>
                     <encoding>UTF-8</encoding>
                     <consoleOutput>true</consoleOutput>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>8.42</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
@@ -796,27 +872,6 @@
         </profile>
         <!-- TODO: Add a profile to run API tests (integration tests that end in IT.java. See conf/docker-aio/run-test-suite.sh -->
       <profile>
-        <id>Java8</id>
-        <activation>
-          <jdk>1.8</jdk>
-        </activation>
-        <build>
-          <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-compiler-plugin</artifactId>
-              <version>3.8.0</version>
-              <configuration>
-                <source>1.8</source>
-                <target>1.8</target>
-                <!-- for use with `mvn -DcompilerArgument=-Xlint:unchecked compile` -->
-                <compilerArgument>${compilerArgument}</compilerArgument>
-              </configuration>
-            </plugin>
-          </plugins>
-        </build>
-      </profile>
-      <profile>
         <id>Java9Plus</id>
         <activation>
           <jdk>[1.9</jdk>
@@ -828,7 +883,7 @@
               <artifactId>maven-compiler-plugin</artifactId>
               <version>3.8.0</version>
               <configuration>
-                <release>8</release>
+                <release>11</release>
                 <!-- for use with `mvn -DcompilerArgument=-Xlint:unchecked compile` -->
                 <compilerArgument>${compilerArgument}</compilerArgument>
               </configuration>
@@ -836,5 +891,35 @@
           </plugins>
         </build>
       </profile>
+        <profile>
+            <id>tc</id>
+            <properties>
+                <skipUnitTests>true</skipUnitTests>
+                <postgresql.server.version>9.6</postgresql.server.version>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.22.2</version>
+                        <configuration>
+                            <groups>testcontainers</groups>
+                            <systemPropertyVariables>
+                                <postgresql.server.version>${postgresql.server.version}</postgresql.server.version>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>

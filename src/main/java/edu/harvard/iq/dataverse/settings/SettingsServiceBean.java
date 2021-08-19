@@ -218,10 +218,6 @@ public class SettingsServiceBean {
         */
         ThumbnailSizeLimitImage,
         ThumbnailSizeLimitPDF,
-        /* status message that will appear on the home page */
-        StatusMessageHeader,
-        /* full text of status message, to appear in popup */
-        StatusMessageText,
         /* return email address for system emails such as notifications */
         SystemEmail, 
         /* size limit for Tabular data file ingests */
@@ -232,20 +228,6 @@ public class SettingsServiceBean {
         SPSS/sav format, "RData" for R, etc.
         for example: :TabularIngestSizeLimit:RData */
         TabularIngestSizeLimit,
-        /**
-        Whether to allow user to create GeoConnect Maps
-        This boolean effects whether the user sees the map button on 
-        the dataset page and if the ingest will create a shape file
-        Default is false
-        */
-        GeoconnectCreateEditMaps,
-        /**
-        Whether to allow a user to view existing maps
-        This boolean effects whether a user may see the 
-        Explore World Map Button
-        Default is false;
-        */
-        GeoconnectViewMaps,
         /**
          The message added to a popup upon dataset publish
          * 
@@ -375,6 +357,11 @@ public class SettingsServiceBean {
         IndependentHandleService,
 
         /**
+        Handle to use for authentication if the default is not being used
+        */
+        HandleAuthHandle,
+
+        /**
          * Archiving can be configured by providing an Archiver class name (class must extend AstractSubmitToArchiverCommand)
          * and a list of settings that should be passed to the Archiver.
          * Note: 
@@ -422,7 +409,44 @@ public class SettingsServiceBean {
         /**
          * Shibboleth affiliation attribute which holds information about the affiliation of the user (e.g. ou)
          */
-        ShibAffiliationAttribute
+        ShibAffiliationAttribute,
+        /**
+         * Convert shibboleth AJP attributes from ISO-8859-1 to UTF-8
+         */
+        ShibAttributeCharacterSetConversionEnabled,
+        /**
+         * Validate physical files for all the datafiles in the dataset when publishing
+         */
+        FileValidationOnPublishEnabled,
+        /**
+         * If defined, this is the URL of the zipping service outside 
+         * the main Application Service where zip downloads should be directed
+         * instead of /api/access/datafiles/
+         */
+        CustomZipDownloadServiceUrl,
+        /**
+         * Sort Date Facets Chronologically instead or presenting them in order of # of hits as other facets are. Default is true
+         */
+        ChronologicalDateFacets,
+        
+        /**
+         * Used where BrandingUtil.getInstallationBrandName is called, overides the default use of the root Dataverse collection name
+         */
+        InstallationName,
+        /**
+         * In metadata exports that set a 'distributor' this flag determines whether the
+         * Installation Brand Name is always included (default/false) or is not included
+         * when the Distributor field (citation metadatablock) is set (true)
+         */
+        ExportInstallationAsDistributorOnlyWhenNotSet, 
+        /**
+         * A comma-separated list of field type names that should be 'withheld' when
+         * dataset access occurs via a Private Url with Anonymized Access (e.g. to
+         * support anonymized review). A suggested minimum includes author,
+         * datasetContact, and contributor, but additional fields such as depositor, grantNumber, and
+         * publication might also need to be included.
+         */
+        AnonymizedFieldTypeNames
         ;
 
         @Override

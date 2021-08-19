@@ -39,6 +39,10 @@ import edu.harvard.iq.dataverse.util.StringUtil;
  * @author skraffmiller
  */
 @NamedQueries({
+    @NamedQuery(name = "Dataset.findIdStale",
+               query = "SELECT d.id FROM Dataset d WHERE d.indexTime is NULL OR d.indexTime < d.modificationTime"),
+    @NamedQuery(name = "Dataset.findIdStalePermission",
+               query = "SELECT d.id FROM Dataset d WHERE d.permissionIndexTime is NULL OR d.permissionIndexTime < d.permissionModificationTime"),
     @NamedQuery(name = "Dataset.findByIdentifier",
                query = "SELECT d FROM Dataset d WHERE d.identifier=:identifier"),
     @NamedQuery(name = "Dataset.findByIdentifierAuthorityProtocol",
@@ -49,32 +53,29 @@ import edu.harvard.iq.dataverse.util.StringUtil;
                 query = "SELECT o.id FROM Dataset o WHERE o.owner.id=:ownerId"),
     @NamedQuery(name = "Dataset.findByOwnerId", 
                 query = "SELECT o FROM Dataset o WHERE o.owner.id=:ownerId"),
+    @NamedQuery(name = "Dataset.findByCreatorId",
+                query = "SELECT o FROM Dataset o WHERE o.creator.id=:creatorId"),
+    @NamedQuery(name = "Dataset.findByReleaseUserId",
+                query = "SELECT o FROM Dataset o WHERE o.releaseUser.id=:releaseUserId"),
 })
 
 /*
-    Below is the stored procedure for getting a numeric value from a database 
-    sequence. Used when the Dataverse is (optionally) configured to use 
-    incremental numeric values for dataset ids, instead of the default 
+    Below is the database stored procedure for getting a string dataset id.
+    Used when the Dataverse is (optionally) configured to use
+    procedurally generated values for dataset ids, instead of the default
     random strings. 
 
-    Unfortunately, there's no standard EJB way of handling sequences. So in the 
-    past we would simply use a NativeQuery to call a proprietary Postgres
-    sequence query. A better way of handling this however is to define any 
-    proprietary SQL functionality outside of the application, in the database, 
-    and call it using the standard JPA @StoredProcedureQuery. 
-
-    The identifier sequence and the stored procedure for accessing it are currently 
-    implemented with PostgresQL "CREATE SEQUENCE ..." and "CREATE FUNCTION ..."; 
-    (we explain how to create these in the installation documentation and supply 
-    a script). If necessary, it can be implemented using other SQL flavors -
+    The use of a stored procedure to create an identifier is explained in the
+    installation documentation (where an example script is supplied).
+    The stored procedure can be implemented using other SQL flavors -
     without having to modify the application code. 
-            -- L.A. 4.6.2
+            -- L.A. 4.6.2 (modified by C.S. for version 5.4.1+)
 */ 
 @NamedStoredProcedureQuery(
-        name = "Dataset.generateIdentifierAsSequentialNumber",
-        procedureName = "generateIdentifierAsSequentialNumber",
+        name = "Dataset.generateIdentifierFromStoredProcedure",
+        procedureName = "generateIdentifierFromStoredProcedure",
         parameters = {
-            @StoredProcedureParameter(mode = ParameterMode.OUT, type = Integer.class, name = "identifier")
+            @StoredProcedureParameter(mode = ParameterMode.OUT, type = String.class)
         }
 )
 @Entity
@@ -336,6 +337,7 @@ public class Dataset extends DvObjectContainer {
                 newFm.setDataFile(fm.getDataFile());
                 newFm.setDatasetVersion(dsv);
                 newFm.setProvFreeForm(fm.getProvFreeForm());
+                newFm.setInPriorVersion(true);
 
                 //fmVarMet would be updated in DCT
                 if ((fmVarMet != null && !fmVarMet.getId().equals(fm.getId())) || (fmVarMet == null))  {
@@ -419,6 +421,15 @@ public class Dataset extends DvObjectContainer {
     public DatasetVersion getReleasedVersion() {
         for (DatasetVersion version : this.getVersions()) {
             if (version.isReleased()) {
+                return version;
+            }
+        }
+        return null;
+    }
+    
+    public DatasetVersion getVersionFromId(Long datasetVersionId) {
+        for (DatasetVersion version : this.getVersions()) {
+            if (datasetVersionId == version.getId().longValue()) {
                 return version;
             }
         }
@@ -631,7 +642,11 @@ public class Dataset extends DvObjectContainer {
     }
 
     public String getCitation(boolean isOnlineVersion, DatasetVersion version) {
-        return version.getCitation(isOnlineVersion);
+        return getCitation(isOnlineVersion, version, false);
+    }
+    
+    public String getCitation(boolean isOnlineVersion, DatasetVersion version, boolean anonymized) {
+        return version.getCitation(isOnlineVersion, anonymized);
     }
 
     public String getPublicationDateFormattedYYYYMMDD() {
@@ -836,8 +851,8 @@ public class Dataset extends DvObjectContainer {
         return equals(other) || equals(other.getOwner());
     }
 
-    public DatasetThumbnail getDatasetThumbnail() {
-        return DatasetUtil.getThumbnail(this);
+    public DatasetThumbnail getDatasetThumbnail(int size) {
+        return DatasetUtil.getThumbnail(this, size);
     }
     
     /** 
@@ -848,8 +863,8 @@ public class Dataset extends DvObjectContainer {
      * @param datasetVersion
      * @return A thumbnail of the dataset (may be {@code null}).
      */
-    public DatasetThumbnail getDatasetThumbnail(DatasetVersion datasetVersion) {
-        return DatasetUtil.getThumbnail(this, datasetVersion);
+    public DatasetThumbnail getDatasetThumbnail(DatasetVersion datasetVersion, int size) {
+        return DatasetUtil.getThumbnail(this, datasetVersion, size);
     }
 
 }

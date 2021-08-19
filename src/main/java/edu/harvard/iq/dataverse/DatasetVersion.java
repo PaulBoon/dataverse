@@ -49,7 +49,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import javax.validation.constraints.Size;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  *
@@ -213,6 +213,33 @@ public class DatasetVersion implements Serializable {
         fileMetadatasCopy.addAll(fileMetadatas);
         Collections.sort(fileMetadatasCopy, FileMetadata.compareByLabelAndFolder);
         return fileMetadatasCopy;
+    }
+    
+    public List<FileMetadata> getFileMetadatasFolderListing(String folderName) {
+        ArrayList<FileMetadata> fileMetadatasCopy = new ArrayList<>();
+        HashSet<String> subFolders = new HashSet<>();
+
+        for (FileMetadata fileMetadata : fileMetadatas) {
+            String thisFolder = fileMetadata.getDirectoryLabel() == null ? "" : fileMetadata.getDirectoryLabel(); 
+            
+            if (folderName.equals(thisFolder)) {
+                fileMetadatasCopy.add(fileMetadata);
+            } else if (thisFolder.startsWith(folderName)) {
+                String subFolder = "".equals(folderName) ? thisFolder : thisFolder.substring(folderName.length() + 1);
+                if (subFolder.indexOf('/') > 0) {
+                    subFolder = subFolder.substring(0, subFolder.indexOf('/'));
+                }
+                
+                if (!subFolders.contains(subFolder)) {
+                    fileMetadatasCopy.add(fileMetadata);
+                    subFolders.add(subFolder);
+                }
+                
+            }
+        }
+        Collections.sort(fileMetadatasCopy, FileMetadata.compareByFullPath);
+                
+        return fileMetadatasCopy; 
     }
 
     public void setFileMetadatas(List<FileMetadata> fileMetadatas) {
@@ -843,7 +870,7 @@ public class DatasetVersion implements Serializable {
                             datasetAuthor.setAffiliation(subField);
                         }
                         if (subField.getDatasetFieldType().getName().equals(DatasetFieldConstant.authorIdType)){
-                             datasetAuthor.setIdType(subField.getDisplayValue());
+                             datasetAuthor.setIdType(subField.getRawValue());
                         }
                         if (subField.getDatasetFieldType().getName().equals(DatasetFieldConstant.authorIdValue)){
                             datasetAuthor.setIdValue(subField.getDisplayValue());
@@ -871,7 +898,7 @@ public class DatasetVersion implements Serializable {
                             contributorName = subField.getDisplayValue();
                         }
                         if (subField.getDatasetFieldType().getName().equals(DatasetFieldConstant.contributorType)) {
-                            contributorType = subField.getDisplayValue();
+                            contributorType = subField.getRawValue();
                         }
                     }
                     //SEK 02/12/2019 move outside loop to prevent contrib type to carry over to next contributor
@@ -1313,7 +1340,11 @@ public class DatasetVersion implements Serializable {
     }
 
     public String getCitation(boolean html) {
-        return new DataCitation(this).toString(html);
+        return getCitation(html, false);
+    }
+    
+    public String getCitation(boolean html, boolean anonymized) {
+        return new DataCitation(this).toString(html, anonymized);
     }
     
     public Date getCitationDate() {
@@ -1363,21 +1394,6 @@ public class DatasetVersion implements Serializable {
             }
         }
         return null;
-    }
-    
-    // TODO: Consider renaming this method since it's also used for getting the "provider" for Schema.org JSON-LD.
-    public String getRootDataverseNameforCitation(){
-                    //Get root dataverse name for Citation
-        Dataverse root = this.getDataset().getOwner();
-        while (root.getOwner() != null) {
-            root = root.getOwner();
-        }
-        String rootDataverseName = root.getName();
-        if (!StringUtil.isEmpty(rootDataverseName)) {
-            return rootDataverseName;
-        } else {
-            return "";
-        }
     }
 
     public List<DatasetDistributor> getDatasetDistributors() {
@@ -1510,16 +1526,7 @@ public class DatasetVersion implements Serializable {
         }
         return serverName + "/dataset.xhtml?id=" + dset.getId() + "&versionId=" + this.getId();
     } 
-    
-    /*
-    Per #3511 we  are returning all users to the File Landing page
-    If we in the future we are going to return them to the referring page we will need the 
-    getReturnToDatasetURL method and add something to the call to the api to
-    pass the referring page and some kind of decision point in  the getWorldMapDatafileInfo method in 
-    WorldMapRelatedData
-    SEK 3/24/2017
-    */
-    
+
     public String getReturnToFilePageURL (String serverName, Dataset dset, DataFile dataFile){
         if (serverName == null || dataFile == null) {
             return null;
@@ -1700,11 +1707,11 @@ public class DatasetVersion implements Serializable {
         JsonArrayBuilder authors = Json.createArrayBuilder();
         for (DatasetAuthor datasetAuthor : this.getDatasetAuthors()) {
             JsonObjectBuilder author = Json.createObjectBuilder();
-            String name = datasetAuthor.getName().getValue();
+            String name = datasetAuthor.getName().getDisplayValue();
             DatasetField authorAffiliation = datasetAuthor.getAffiliation();
             String affiliation = null;
             if (authorAffiliation != null) {
-                affiliation = datasetAuthor.getAffiliation().getValue();
+                affiliation = datasetAuthor.getAffiliation().getDisplayValue();
             }
             // We are aware of "givenName" and "familyName" but instead of a person it might be an organization such as "Gallup Organization".
             //author.add("@type", "Person");
@@ -1856,7 +1863,7 @@ public class DatasetVersion implements Serializable {
             JsonObjectBuilder license = Json.createObjectBuilder().add("@type", "Dataset");
             
             if (TermsOfUseAndAccess.License.CC0.equals(terms.getLicense())) {
-                license.add("text", "CC0").add("url", "https://creativecommons.org/publicdomain/zero/1.0/");
+                license.add("text", "CC0").add("url", TermsOfUseAndAccess.CC0_URI);
             } else {
                 String termsOfUse = terms.getTermsOfUse();
                 // Terms of use can be null if you create the dataset with JSON.
@@ -1870,11 +1877,11 @@ public class DatasetVersion implements Serializable {
         
         job.add("includedInDataCatalog", Json.createObjectBuilder()
                 .add("@type", "DataCatalog")
-                .add("name", this.getRootDataverseNameforCitation())
+                .add("name", BrandingUtil.getRootDataverseCollectionName())
                 .add("url", SystemConfig.getDataverseSiteUrlStatic())
         );
 
-        String installationBrandName = BrandingUtil.getInstallationBrandName(getRootDataverseNameforCitation());
+        String installationBrandName = BrandingUtil.getInstallationBrandName();
         /**
          * Both "publisher" and "provider" are included but they have the same
          * values. Some services seem to prefer one over the other.
@@ -1942,6 +1949,10 @@ public class DatasetVersion implements Serializable {
             job.add("distribution", fileArray);
         }
         jsonLd = job.build().toString();
+        
+        //Most fields above should be stripped/sanitized but, since this is output in the dataset page as header metadata, do a final sanitize step to make sure
+        jsonLd = MarkupChecker.stripAllTags(jsonLd);
+        
         return jsonLd;
     }
 

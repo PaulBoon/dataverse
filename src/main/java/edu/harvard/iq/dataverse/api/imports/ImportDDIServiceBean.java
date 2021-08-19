@@ -31,7 +31,7 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLInputFactory;
 
 import edu.harvard.iq.dataverse.util.json.ControlledVocabularyException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  *
@@ -103,6 +103,8 @@ public class ImportDDIServiceBean {
    
     @EJB DatasetFieldServiceBean datasetFieldService;
     
+    @EJB ImportGenericServiceBean importGenericService;
+    
     
     // TODO: stop passing the xml source as a string; (it could be huge!) -- L.A. 4.5
     // TODO: what L.A. Said.
@@ -171,12 +173,15 @@ public class ImportDDIServiceBean {
     }
     
     private void processDDI(ImportType importType, XMLStreamReader xmlr, DatasetDTO datasetDTO, Map<String, String> filesMap) throws XMLStreamException, ImportException {
-       
         // make sure we have a codeBook
         //while ( xmlr.next() == XMLStreamConstants.COMMENT ); // skip pre root comments
-        xmlr.nextTag();
-        xmlr.require(XMLStreamConstants.START_ELEMENT, null, "codeBook");
-
+        try {
+            xmlr.nextTag();
+            xmlr.require(XMLStreamConstants.START_ELEMENT, null, "codeBook");
+        } catch( XMLStreamException e) {
+            throw new XMLStreamException("It doesn't start with the XML element <codeBook>");
+        }
+        
         // Some DDIs provide an ID in the <codeBook> section.
         // We are going to treat it as just another otherId.
         // (we've seen instances where this ID was the only ID found in
@@ -278,7 +283,7 @@ public class ImportDDIServiceBean {
                     // this will set a StudyId if it has not yet been set; it will get overridden by a metadata
                     // id in the StudyDscr section, if one exists
                     if ( AGENCY_HANDLE.equals( xmlr.getAttributeValue(null, "agency") ) ) {
-                        parseStudyIdHandle( parseText(xmlr), datasetDTO );
+                        importGenericService.reassignIdentifierAsGlobalId( parseText(xmlr), datasetDTO );
                     }
                 // EMK TODO: we need to save this somewhere when we add harvesting infrastructure
                 } /*else if ( xmlr.getLocalName().equals("holdings") && StringUtil.isEmpty(datasetDTO..getHarvestHoldings()) ) {
@@ -1406,10 +1411,8 @@ public class ImportDDIServiceBean {
                   FieldDTO field = FieldDTO.createPrimitiveFieldDTO("alternativeTitle", parseText(xmlr));
                    citation.getFields().add(field);
                 } else if (xmlr.getLocalName().equals("IDNo")) {
-                    if ( AGENCY_HANDLE.equals( xmlr.getAttributeValue(null, "agency") ) ) {
-                        parseStudyIdHandle( parseText(xmlr), datasetDTO );
-                    } else if ( AGENCY_DOI.equals( xmlr.getAttributeValue(null, "agency") ) ) {
-                        parseStudyIdDOI( parseText(xmlr), datasetDTO );
+                    if ( AGENCY_HANDLE.equals( xmlr.getAttributeValue(null, "agency") ) || AGENCY_DOI.equals( xmlr.getAttributeValue(null, "agency") ) ) {
+                        importGenericService.reassignIdentifierAsGlobalId(parseText(xmlr), datasetDTO);
                     } else if ( AGENCY_DARA.equals( xmlr.getAttributeValue(null, "agency"))) {
                         /* 
                             da|ra - "Registration agency for social and economic data"
@@ -1686,43 +1689,6 @@ public class ImportDDIServiceBean {
         return returnValues;
     }    
      
-   private void parseStudyIdHandle(String _id, DatasetDTO datasetDTO)  {
-
-        int index1 = _id.indexOf(':');
-        int index2 = _id.indexOf('/');
-        if (index1==-1) {
-            throw new EJBException("Error parsing (Handle) IdNo: "+_id+". ':' not found in string");
-        } else {
-            datasetDTO.setProtocol(_id.substring(0,index1));
-        }
-        if (index2 == -1) {
-            throw new EJBException("Error parsing (Handle) IdNo: "+_id+". '/' not found in string");
-
-        } else {
-            datasetDTO.setAuthority(_id.substring(index1+1, index2));
-        }
-        datasetDTO.setProtocol("hdl");
-        datasetDTO.setIdentifier(_id.substring(index2+1));
-    }
-
-    private void parseStudyIdDOI(String _id, DatasetDTO datasetDTO) throws ImportException{
-        int index1 = _id.indexOf(':');
-        int index2 = _id.indexOf('/');
-        if (index1==-1) {
-            throw new EJBException("Error parsing (DOI) IdNo: "+_id+". ':' not found in string");
-        }  
-       
-        if (index2 == -1) {
-            throw new ImportException("Error parsing (DOI) IdNo: "+_id+". '/' not found in string");
-
-        } else {
-               datasetDTO.setAuthority(_id.substring(index1+1, index2));
-        }
-        datasetDTO.setProtocol("doi");
-       
-        datasetDTO.setIdentifier(_id.substring(index2+1));
-    }
-    
     private void parseStudyIdDoiICPSRdara(String _id, DatasetDTO datasetDTO) throws ImportException{
         /*
             dara/ICPSR DOIs are formatted without the hdl: prefix; for example - 

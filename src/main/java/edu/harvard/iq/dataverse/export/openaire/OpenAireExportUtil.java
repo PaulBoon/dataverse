@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 
 import edu.harvard.iq.dataverse.DatasetFieldConstant;
 import edu.harvard.iq.dataverse.GlobalId;
+import edu.harvard.iq.dataverse.TermsOfUseAndAccess;
 import edu.harvard.iq.dataverse.api.dto.DatasetDTO;
 import edu.harvard.iq.dataverse.api.dto.DatasetVersionDTO;
 import edu.harvard.iq.dataverse.api.dto.FieldDTO;
@@ -276,11 +277,16 @@ public class OpenAireExportUtil {
                                     if ((nameType_check) && (!creatorName.replaceFirst(",", "").contains(","))) {
                                         // creatorName=<FamilyName>, <FirstName>
                                         String[] fullName = creatorName.split(", ");
-                                        givenName = fullName[1];
-                                        String familyName = fullName[0];
+                                        if (fullName.length == 2) {
+                                            givenName = fullName[1];
+                                            String familyName = fullName[0];
 
-                                        writeFullElement(xmlw, null, "givenName", null, givenName, language);
-                                        writeFullElement(xmlw, null, "familyName", null, familyName, language);
+                                            writeFullElement(xmlw, null, "givenName", null, givenName, language);
+                                            writeFullElement(xmlw, null, "familyName", null, familyName, language);
+                                        } else {
+                                            // It's possible to get here if "Smith," is entered as an author name.
+                                            logger.info("Unable to write givenName and familyName based on creatorName '" + creatorName + "'.");
+                                        }
                                     }
                                 } else {
                                     String givenName = FirstNames.getInstance().getFirstName(creatorName);
@@ -1130,7 +1136,7 @@ public class OpenAireExportUtil {
         writeRightsHeader(xmlw, language);
         if (StringUtils.isNotBlank(datasetVersionDTO.getLicense())) {
             if (StringUtils.containsIgnoreCase(datasetVersionDTO.getLicense(), "cc0")) {
-                xmlw.writeAttribute("rightsURI", "https://creativecommons.org/publicdomain/zero/1.0/");
+                xmlw.writeAttribute("rightsURI", TermsOfUseAndAccess.CC0_URI);
                 if (StringUtils.isNotBlank(datasetVersionDTO.getTermsOfUse())) {
                     xmlw.writeCharacters(datasetVersionDTO.getTermsOfUse());
                 }

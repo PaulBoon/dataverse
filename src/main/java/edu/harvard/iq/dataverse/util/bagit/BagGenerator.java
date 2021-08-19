@@ -56,6 +56,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
@@ -92,7 +93,6 @@ public class BagGenerator {
     private int timeout = 60;
     private RequestConfig config = RequestConfig.custom().setConnectTimeout(timeout * 1000)
             .setConnectionRequestTimeout(timeout * 1000).setSocketTimeout(timeout * 1000).build();
-    private static HttpClientContext localContext = HttpClientContext.create();
     protected CloseableHttpClient client;
     private PoolingHttpClientConnectionManager cm = null;
 
@@ -158,6 +158,7 @@ public class BagGenerator {
             SSLConnectionSocketFactory sslConnectionFactory = new SSLConnectionSocketFactory(builder.build(), NoopHostnameVerifier.INSTANCE);
 
             Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
+            		.register("http", PlainConnectionSocketFactory.getSocketFactory())
                     .register("https", sslConnectionFactory).build();
             cm = new PoolingHttpClientConnectionManager(registry);
 
@@ -176,7 +177,11 @@ public class BagGenerator {
     public void setIgnoreHashes(boolean val) {
         ignorehashes = val;
     }
-
+    
+    public void setDefaultCheckSumType(ChecksumType type) {
+    	hashtype=type;
+    }
+    
     public static void println(String s) {
         System.out.println(s);
         System.out.flush();
@@ -530,18 +535,22 @@ public class BagGenerator {
                 if (child.has(JsonLDTerm.checksum.getLabel())) {
                     ChecksumType childHashType = ChecksumType.fromString(
                             child.getAsJsonObject(JsonLDTerm.checksum.getLabel()).get("@type").getAsString());
-                    if (hashtype != null && !hashtype.equals(childHashType)) {
-                        logger.warning("Multiple hash values in use - not supported");
-                    }
-                    if (hashtype == null)
+                    if (hashtype == null) {
+                    	//If one wasn't set as a default, pick up what the first child with one uses
                         hashtype = childHashType;
-                    childHash = child.getAsJsonObject(JsonLDTerm.checksum.getLabel()).get("@value").getAsString();
-                    if (checksumMap.containsValue(childHash)) {
-                        // Something else has this hash
-                        logger.warning("Duplicate/Collision: " + child.get("@id").getAsString() + " has SHA1 Hash: "
-                                + childHash);
-                    }
-                    checksumMap.put(childPath, childHash);
+					}
+					if (hashtype != null && !hashtype.equals(childHashType)) {
+						logger.warning("Multiple hash values in use - will calculate " + hashtype.toString()
+								+ " hashes for " + childTitle);
+					} else {
+						childHash = child.getAsJsonObject(JsonLDTerm.checksum.getLabel()).get("@value").getAsString();
+						if (checksumMap.containsValue(childHash)) {
+							// Something else has this hash
+							logger.warning("Duplicate/Collision: " + child.get("@id").getAsString() + " has SHA1 Hash: "
+									+ childHash);
+						}
+						checksumMap.put(childPath, childHash);
+					}
                 }
                 if ((hashtype == null) | ignorehashes) {
                     // Pick sha512 when ignoring hashes or none exist
@@ -567,8 +576,8 @@ public class BagGenerator {
                             }
 
                         } catch (IOException e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
+                            logger.severe("Failed to read " + childPath);
+                            throw e;
                         } finally {
                             IOUtils.closeQuietly(inputStream);
                         }
@@ -754,8 +763,10 @@ public class BagGenerator {
                         info.append(CRLF);
 
                     } else {
-                        info.append(((JsonObject) person).get(contactNameTerm.getLabel()).getAsString());
-                        info.append(CRLF);
+                        if(contactNameTerm != null) {
+                          info.append(((JsonObject) person).get(contactNameTerm.getLabel()).getAsString());
+                          info.append(CRLF);
+                        }
                         if ((contactEmailTerm!=null) &&((JsonObject) person).has(contactEmailTerm.getLabel())) {
                             info.append("Contact-Email: ");
                             info.append(((JsonObject) person).get(contactEmailTerm.getLabel()).getAsString());
@@ -772,9 +783,10 @@ public class BagGenerator {
 
                 } else {
                     JsonObject person = contacts.getAsJsonObject();
-
-                    info.append(person.get(contactNameTerm.getLabel()).getAsString());
-                    info.append(CRLF);
+                    if(contactNameTerm != null) {
+                      info.append(person.get(contactNameTerm.getLabel()).getAsString());
+                      info.append(CRLF);
+                    }
                     if ((contactEmailTerm!=null) && (person.has(contactEmailTerm.getLabel()))) {
                         info.append("Contact-Email: ");
                         info.append(person.get(contactEmailTerm.getLabel()).getAsString());
@@ -812,7 +824,7 @@ public class BagGenerator {
         } else {
             info.append(
                     // FixMe - handle description having subfields better
-                    WordUtils.wrap(getSingleValue(aggregation.getAsJsonObject(descriptionTerm.getLabel()),
+                    WordUtils.wrap(getSingleValue(aggregation.get(descriptionTerm.getLabel()),
                             descriptionTextTerm.getLabel()), 78, CRLF + " ", true));
 
             info.append(CRLF);
@@ -858,22 +870,24 @@ public class BagGenerator {
      *            - the key to find a value(s) for
      * @return - a single string
      */
-    String getSingleValue(JsonObject jsonObject, String key) {
+    String getSingleValue(JsonElement jsonElement, String key) {
         String val = "";
-        if (jsonObject.get(key).isJsonPrimitive()) {
+        if(jsonElement.isJsonObject()) {
+            JsonObject jsonObject=jsonElement.getAsJsonObject();
             val = jsonObject.get(key).getAsString();
-        } else if (jsonObject.get(key).isJsonArray()) {
-            Iterator<JsonElement> iter = jsonObject.getAsJsonArray(key).iterator();
+        } else if (jsonElement.isJsonArray()) {
+            
+            Iterator<JsonElement> iter = jsonElement.getAsJsonArray().iterator();
             ArrayList<String> stringArray = new ArrayList<String>();
             while (iter.hasNext()) {
-                stringArray.add(iter.next().getAsString());
+                stringArray.add(iter.next().getAsJsonObject().getAsJsonPrimitive(key).getAsString());
             }
             if (stringArray.size() > 1) {
-                val = StringUtils.join((String[]) stringArray.toArray(), ",");
+                val = StringUtils.join(stringArray.toArray(), ",");
             } else {
                 val = stringArray.get(0);
             }
-            logger.warning("Multiple values found for: " + key + ": " + val);
+            logger.fine("Multiple values found for: " + key + ": " + val);
         }
         return val;
     }
@@ -981,7 +995,8 @@ public class BagGenerator {
                         HttpGet getMap = createNewGetRequest(new URI(uri), null);
                         logger.finest("Retrieving " + tries + ": " + uri);
                         CloseableHttpResponse response;
-                        response = client.execute(getMap, localContext);
+                        //Note - if we ever need to pass an HttpClientContext, we need a new one per thread.
+                        response = client.execute(getMap);
                         if (response.getStatusLine().getStatusCode() == 200) {
                             logger.finest("Retrieved: " + uri);
                             return response.getEntity().getContent();

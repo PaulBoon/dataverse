@@ -40,6 +40,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.xml.stream.XMLInputFactory;
+import net.handle.hdllib.HandleException;
+import net.handle.hdllib.HandleResolver;
 
 
 /**
@@ -366,31 +368,51 @@ public class ImportGenericServiceBean {
     }
     
     private String getOtherIdFromDTO(DatasetVersionDTO datasetVersionDTO) {
+        List<String> otherIds = new ArrayList<>();
         for (Map.Entry<String, MetadataBlockDTO> entry : datasetVersionDTO.getMetadataBlocks().entrySet()) {
             String key = entry.getKey();
             MetadataBlockDTO value = entry.getValue();
             if ("citation".equals(key)) {
                 for (FieldDTO fieldDTO : value.getFields()) {
                     if (DatasetFieldConstant.otherId.equals(fieldDTO.getTypeName())) {
-                        String otherId = "";
                         for (HashSet<FieldDTO> foo : fieldDTO.getMultipleCompound()) {
                             for (FieldDTO next : foo) {
                                 if (DatasetFieldConstant.otherIdValue.equals(next.getTypeName())) {
-                                    otherId =  next.getSinglePrimitive();
+                                    otherIds.add(next.getSinglePrimitive());
                                 }
-                            }
-                            if (!otherId.isEmpty()){
-                                return otherId;
                             }
                         }
                     }
                 }
             }
         }
+        if (!otherIds.isEmpty()) {
+            // We prefer doi or hdl identifiers like "doi:10.7910/DVN/1HE30F"
+            for (String otherId : otherIds) {
+                if (otherId.startsWith(GlobalId.DOI_PROTOCOL) || otherId.startsWith(GlobalId.HDL_PROTOCOL) || otherId.startsWith(GlobalId.DOI_RESOLVER_URL) || otherId.startsWith(GlobalId.HDL_RESOLVER_URL)) {
+                    return otherId;
+                }
+            }
+            // But identifiers without hdl or doi like "10.6084/m9.figshare.12725075.v1" are also allowed
+            for (String otherId : otherIds) {
+                try {
+                    HandleResolver hr = new HandleResolver();
+                    hr.resolveHandle(otherId);
+                    return GlobalId.HDL_PROTOCOL + ":" + otherId;
+                } catch (HandleException e) {
+                    logger.fine("Not a valid handle: " + e.toString());
+                }
+            }
+        }
         return null;
     }
     
-    private String reassignIdentifierAsGlobalId(String identifierString, DatasetDTO datasetDTO) {
+    /* This is a general parser that can take DOI and Handle Ids, in their local or
+     * URL forms (e.g. doi:... or https://doi.org/...) and parse them into
+     * protocol/authority/identifier parts that are assigned to the datasetDTO.
+     * The name reflects the original purpose but it is now used in ImportDDIServiceBean as well.
+     */
+    public String reassignIdentifierAsGlobalId(String identifierString, DatasetDTO datasetDTO) {
 
         int index1 = identifierString.indexOf(':');
         int index2 = identifierString.indexOf('/');

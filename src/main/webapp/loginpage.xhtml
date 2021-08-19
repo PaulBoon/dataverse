@@ -132,7 +132,7 @@
                                                 <div class="IdPSelectTextDiv help-block"></div>
                                                 <div class="form-group">
                                                     <div class="col-sm-9 button-block">
-                                                        <button id="login" name="login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only btn btn-default" onclick="return true;" type="submit" role="button" aria-disabled="false"><span class="ui-button-text ui-c"><strong>Institutional Login</strong></span></button>
+                                                        <button id="login" name="login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only btn btn-default" onclick="return true;" type="submit" role="button" aria-disabled="false"><span class="ui-button-text ui-c text-nowrap"><strong>Institutional Login</strong></span></button>
                                                     </div>
                                                 </div>
                                             </form>
@@ -221,7 +221,7 @@
                             </div>
 
                             <div id="otherProviders" jsf:rendered="#{LoginPage.listAuthenticationProviders().size() > 1}">
-                                <h4>#{bundle['auth.providers.title']}</h4>
+                                <h3>#{bundle['auth.providers.title']}</h3>
                                 <h:form>
                                     <ui:repeat value="#{LoginPage.listAuthenticationProviders()}" var="provider">
                                         <p:commandLink rendered="#{provider.id != LoginPage.authProvider.id}" styleClass="btn btn-default" actionListener="#{LoginPage.setAuthProviderById(provider.id)}" update="login-container">
@@ -239,7 +239,7 @@
                                 </div>
                             </div>
                             
-                            <div id="signUpLink">
+                            <div id="signUpLink" jsf:rendered="#{dataverseHeaderFragment.signupAllowed}">
                                 <p class="help-block margin-top">
                                     <h:outputFormat value="#{bundle['login.signup.blurb']}" escape="false">
                                         <f:param value="#{dataverseHeaderFragment.getSignupUrl(navigationWrapper.redirectPage)}"/>
