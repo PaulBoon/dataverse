@@ -65,6 +65,9 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -100,6 +103,8 @@ import org.apache.commons.httpclient.HttpClient;
 import java.util.Arrays;
 import java.util.HashSet;
 import javax.faces.model.SelectItem;
+import javax.faces.validator.ValidatorException;
+
 import java.util.logging.Level;
 import edu.harvard.iq.dataverse.engine.command.exception.IllegalCommandException;
 import edu.harvard.iq.dataverse.engine.command.impl.AbstractSubmitToArchiveCommand;
@@ -125,6 +130,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.io.IOUtils;
 
@@ -241,9 +247,12 @@ public class DatasetPage implements java.io.Serializable {
     ProvPopupFragmentBean provPopupFragmentBean;
     @Inject
     MakeDataCountLoggingServiceBean mdcLogService;
-    @Inject DataverseHeaderFragment dataverseHeaderFragment;
     @Inject
     LicenseServiceBean licenseServiceBean;
+    @Inject
+    DataverseHeaderFragment dataverseHeaderFragment;
+    @Inject
+    EmbargoServiceBean embargoService;
 
     private Dataset dataset = new Dataset();
 
@@ -328,7 +337,7 @@ public class DatasetPage implements java.io.Serializable {
     private Boolean hasRsyncScript = false;
 
     private Boolean hasTabular = false;
-    
+
     //External Vocabulary support
     Map<Long, JsonObject> cachedCvocMap=null;
 
@@ -888,6 +897,18 @@ public class DatasetPage implements java.io.Serializable {
             // "!(fileDeleted: true)" - that will find ALL the records, except for
             // the ones where the value is explicitly set to true.
             solrQuery.addFilterQuery("!(" + SearchFields.FILE_DELETED + ":" + true + ")");
+            /*
+             * With a draft version, there may be multiple hits per file: dataverse will
+             * index the file as shown in the draft version if the metadata or restricted
+             * status has changed. Without the filter below, the file will count twice in
+             * the facet counts. The collapse filter here will limit the results to one hit
+             * for value of the specified field (identifier in this case - unique to the
+             * file) and will order the hits by the max field, i.e. it will pick the entry
+             * with the greatest datasetVersionId, which, given our numbering scheme, will
+             * be the draft version.
+             * https://solr.apache.org/guide/6_6/collapse-and-expand-results.html
+             */
+            solrQuery.addFilterQuery("{!collapse field=" + SearchFields.IDENTIFIER + " max=" + SearchFields.DATASET_VERSION_ID + "}");
 
         }
 
@@ -3320,8 +3341,33 @@ public class DatasetPage implements java.io.Serializable {
             filesToDelete = this.getSelectedFiles();
         }
 
+        //Remove embargoes that are no longer referenced
+        //Identify which ones are involved here
+        List<Embargo> orphanedEmbargoes = new ArrayList<Embargo>();
+        if (selectedFiles != null && selectedFiles.size() > 0) {
+            for (FileMetadata fmd : workingVersion.getFileMetadatas()) {
+                for (FileMetadata fm : selectedFiles) {
+                    if (fm.getDataFile().equals(fmd.getDataFile()) && !fmd.getDataFile().isReleased()) {
+                        Embargo emb = fmd.getDataFile().getEmbargo();
+                        if (emb != null) {
+                            emb.getDataFiles().remove(fmd.getDataFile());
+                            if (emb.getDataFiles().isEmpty()) {
+                                orphanedEmbargoes.add(emb);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         deleteFiles(filesToDelete);
-        return save();
+        String retVal = save();
+        //And delete them only after the dataset is updated
+        for(Embargo emb: orphanedEmbargoes) {
+            embargoService.deleteById(emb.getId());
+        }
+        return retVal;
+
     }
 
     private void deleteFiles(List<FileMetadata> filesToDelete) {
@@ -5007,7 +5053,7 @@ public class DatasetPage implements java.io.Serializable {
             return false;
         }
         for (FileMetadata fmd : workingVersion.getFileMetadatas()){
-            if (!this.fileDownloadHelper.canDownloadFile(fmd)){
+            if (!this.fileDownloadHelper.canDownloadFile(fmd) && !FileUtil.isActivelyEmbargoed(fmd)){
                 return true;
             }
         }
@@ -5026,7 +5072,7 @@ public class DatasetPage implements java.io.Serializable {
             return false;
         }
         for (FileMetadata fmd : this.selectedRestrictedFiles){
-            if (!this.fileDownloadHelper.canDownloadFile(fmd)){
+            if (!this.fileDownloadHelper.canDownloadFile(fmd)&& !FileUtil.isActivelyEmbargoed(fmd)){
                 return true;
             }
         }
@@ -5047,7 +5093,11 @@ public class DatasetPage implements java.io.Serializable {
             //RequestContext requestContext = RequestContext.getCurrentInstance();
             PrimeFaces.current().executeScript("PF('selectFilesForRequestAccess').show()");
             return "";
+        } else if (containsOnlyActivelyEmbargoedFiles(selectedFiles)){
+            PrimeFaces.current().executeScript("PF('selectEmbargoedFilesForRequestAccess').show()");
+            return "";
         } else {
+
             fileDownloadHelper.clearRequestAccessFiles();
             for (FileMetadata fmd : selectedFiles){
                  fileDownloadHelper.addMultipleFilesForRequestAccess(fmd.getDataFile());
@@ -5063,6 +5113,8 @@ public class DatasetPage implements java.io.Serializable {
             }
         }
     }
+
+
 
     public boolean isSortButtonEnabled() {
         /**
@@ -5618,7 +5670,7 @@ public class DatasetPage implements java.io.Serializable {
         }
         return displayName; 
     }
-    
+
     public Map<Long, JsonObject> getCVocConf() {
         //Cache this in the view
         if(cachedCvocMap==null) {
@@ -5626,7 +5678,7 @@ public class DatasetPage implements java.io.Serializable {
         }
         return cachedCvocMap;
     }
-    
+
     public List<String> getVocabScripts() {
         return fieldService.getVocabScripts(getCVocConf());
     }
@@ -5634,4 +5686,184 @@ public class DatasetPage implements java.io.Serializable {
     public String getFieldLanguage(String languages) {
         return fieldService.getFieldLanguage(languages,session.getLocaleCode());
     }
+
+    public Embargo getSelectionEmbargo() {
+        logger.info("getting: " + selectionEmbargo.getDateAvailable());
+        return selectionEmbargo;
+    }
+
+    public void setSelectionEmbargo(Embargo selectionEmbargo) {
+        this.selectionEmbargo = selectionEmbargo;
+    }
+
+
+    private Embargo selectionEmbargo = new Embargo();
+
+    public boolean isValidEmbargoSelection() {
+        for(FileMetadata fmd: selectedFiles) {
+            if(!fmd.getDataFile().isReleased()) {
+                return true;
+            }
+        }
+        if(fileMetadataForAction!=null && !fileMetadataForAction.getDataFile().isReleased()) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isExistingEmbargo() {
+        boolean selectionHasEmbargo = isExistingEmbargo(selectedFiles, true);
+        if(selectionHasEmbargo) {
+            return true;
+        }
+        if(fileMetadataForAction!=null && !fileMetadataForAction.getDataFile().isReleased() && (fileMetadataForAction.getDataFile().getEmbargo()!=null)) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isExistingEmbargo(List<FileMetadata> fmdList, boolean unReleased) {
+        for(FileMetadata fmd: fmdList) {
+            if((unReleased != fmd.getDataFile().isReleased())&& (fmd.getDataFile().getEmbargo()!=null)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isEmbargoForWholeSelection() {
+        for (FileMetadata fmd : selectedFiles) {
+            if (fmd.getDataFile().isReleased()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean removeEmbargo=false;
+
+    public boolean isRemoveEmbargo() {
+        return removeEmbargo;
+    }
+
+    public void setRemoveEmbargo(boolean removeEmbargo) {
+        boolean existing = this.removeEmbargo;
+        this.removeEmbargo = removeEmbargo;
+        //If we flipped the state, update the selectedEmbargo. Otherwise (e.g. when save is hit) don't make changes
+        if(existing != this.removeEmbargo) {
+        if(removeEmbargo) {
+            logger.info("Setting empty embargo");
+            selectionEmbargo= new Embargo(null, null);
+        } else {
+            selectionEmbargo= new Embargo();
+        }
+        }
+    }
+
+    public String saveEmbargo() {
+        if (workingVersion.isReleased()) {
+            refreshSelectedFiles(selectedFiles);
+        }
+        //Todo - add validation and.or separate delete from save of a new embargo
+        if(selectionEmbargo.getDateAvailable()==null && selectionEmbargo.getReason()==null) {
+            selectionEmbargo=null;
+        }
+        logger.info("emb is null: " + (selectionEmbargo==null));
+        logger.info("emb date: " + selectionEmbargo.getFormattedDateAvailable());
+
+        if(!(selectionEmbargo==null || (selectionEmbargo!=null && settingsWrapper.isValidEmbargoDate(selectionEmbargo)))) {
+            logger.info("Validation error: " + selectionEmbargo.getFormattedDateAvailable());
+            FacesContext.getCurrentInstance().validationFailed();
+            return "";
+        }
+        List<Embargo> orphanedEmbargoes = new ArrayList<Embargo>();
+        List<FileMetadata> embargoFMs = null;
+        if (selectedFiles != null && selectedFiles.size() > 0) {
+            embargoFMs = selectedFiles;
+        } else if (fileMetadataForAction != null) {
+            embargoFMs = new ArrayList<FileMetadata>();
+            embargoFMs.add(fileMetadataForAction);
+        }
+        if(embargoFMs!=null && !embargoFMs.isEmpty()) {
+            for (FileMetadata fmd : workingVersion.getFileMetadatas()) {
+                for (FileMetadata fm : embargoFMs) {
+                    if (fm.getDataFile().equals(fmd.getDataFile()) && (isSuperUser()||!fmd.getDataFile().isReleased())) {
+                        Embargo emb = fmd.getDataFile().getEmbargo();
+                        if (emb != null) {
+                            logger.fine("Before: " + emb.getDataFiles().size());
+                            emb.getDataFiles().remove(fmd.getDataFile());
+                            if (emb.getDataFiles().isEmpty()) {
+                                orphanedEmbargoes.add(emb);
+                            }
+                            logger.fine("After: " + emb.getDataFiles().size());
+                        }
+                        fmd.getDataFile().setEmbargo(selectionEmbargo);
+                    }
+                }
+            }
+        }
+        // success message:
+        String successMessage = BundleUtil.getStringFromBundle("file.assignedEmbargo.success");
+        logger.fine(successMessage);
+        successMessage = successMessage.replace("{0}", "Selected Files");
+        JsfHelper.addFlashMessage(successMessage);
+        selectionEmbargo = new Embargo();
+
+        save();
+        for(Embargo emb: orphanedEmbargoes) {
+            embargoService.deleteById(emb.getId());
+        }
+        return returnToDraftVersion();
+    }
+
+    public void clearFileMetadataSelectedForEmbargoPopup() {
+        setRemoveEmbargo(false);
+    }
+
+    public boolean isCantDownloadDueToEmbargo() {
+        if (getSelectedNonDownloadableFiles() != null) {
+            for (FileMetadata fmd : getSelectedNonDownloadableFiles()) {
+                if (FileUtil.isActivelyEmbargoed(fmd)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isCantRequestDueToEmbargo() {
+        if (fileDownloadHelper.getFilesForRequestAccess() != null) {
+            for (DataFile df : fileDownloadHelper.getFilesForRequestAccess()) {
+                if (FileUtil.isActivelyEmbargoed(df)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean containsOnlyActivelyEmbargoedFiles(List<FileMetadata> selectedFiles) {
+        for (FileMetadata fmd : selectedFiles) {
+            if (!FileUtil.isActivelyEmbargoed(fmd)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void validateEmbargoDate(FacesContext context, UIComponent component, Object value)
+            throws ValidatorException {
+        if (!removeEmbargo) {
+            if (!settingsWrapper.isValidEmbargoDate(selectionEmbargo)) {
+                String minDate = settingsWrapper.getMinEmbargoDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                String maxDate= settingsWrapper.getMaxEmbargoDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                String msgString = BundleUtil.getStringFromBundle("embargo.date.invalid", Arrays.asList(minDate, maxDate));
+                //It is not clear that this message ever appears, but the value could be sent by adding validatorMessage="#{bundle['embargo.date.invalid']}"  to the datepicker element in file-edit-popup-fragment.html
+                FacesMessage msg = new FacesMessage(msgString);
+                msg.setSeverity(FacesMessage.SEVERITY_ERROR);
+                throw new ValidatorException(msg);
+            }
+        }
+    }
+
 }
