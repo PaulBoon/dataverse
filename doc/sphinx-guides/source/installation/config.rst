@@ -2385,12 +2385,10 @@ Scripts that implement this association for specific service protocols are maint
 
 ``curl -X PUT --upload-file cvoc-conf.json http://localhost:8080/api/admin/settings/:CVocConf``
 
-
 :AllowCustomTerms
 +++++++++++++++++
 
 By default, custom terms of data use and access can be specified after selecting "Custom Terms" from the License/DUA dropdown on the Terms tab. When ``:AllowCustomTerms`` is  set to ``false`` the "Custom Terms" item is not made available to the depositor.
-
 
 .. _:MaxEmbargoDurationInMonths:
 

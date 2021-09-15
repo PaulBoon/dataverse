@@ -476,16 +476,16 @@ public class SettingsServiceBean {
          */
         CustomPasswordResetAlertIntro,
         CustomPasswordResetButton,
-        /*
-         * Include "Custom Terms" as an item in the license drop-down or not.
-         */
-        AllowCustomTerms,
         /** This setting enables Embargo capabilities in Dataverse and sets the maximum Embargo duration allowed.
          * 0 or not set: new embargoes disabled
          * -1: embargo enabled, no time limit
          * n: embargo enabled with n months the maximum allowed duration
          */
-        MaxEmbargoDurationInMonths
+        MaxEmbargoDurationInMonths,
+        /*
+         * Include "Custom Terms" as an item in the license drop-down or not.
+         */
+        AllowCustomTerms
         ;
 
         @Override
