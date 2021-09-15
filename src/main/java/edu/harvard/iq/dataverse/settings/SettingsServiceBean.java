@@ -466,6 +466,12 @@ public class SettingsServiceBean {
          */
         MetadataLanguages,
         /**
+         * A boolean setting that, if true will send an email and notification to users
+         * when a Dataset is created. Messages go to those who have the
+         * ability/permission necessary to publish the dataset
+         */
+        SendNotificationOnDatasetCreation,
+        /**
          * Configurable text for alert/info message on passwordreset.xhtml when users are required to update their password.
          */
         CustomPasswordResetAlertIntro,
