@@ -62,48 +62,44 @@ public class ImportDatasetCommand extends AbstractCreateDatasetCommand {
             throw new IllegalCommandException("Persistent identifier " + ds.getGlobalIdString() + " already exists in this Dataverse installation.", this);
         }
 
-        return;
+        String pid = ds.getPersistentURL();
+        GetMethod httpGet = new GetMethod(pid);
+        httpGet.setFollowRedirects(false);
 
-        // TODO: Find a permanent solution for https://drivenbydata.atlassian.net/browse/DD-628 Problems with DOI-checking during import
+        HttpClient client = new HttpClient();
 
-//        String pid = ds.getPersistentURL();
-//        GetMethod httpGet = new GetMethod(pid);
-//        httpGet.setFollowRedirects(false);
-//
-//        HttpClient client = new HttpClient();
-//
-//        try {
-//            int responseStatus = client.executeMethod(httpGet);
-//
-//            if (responseStatus == 404) {
-//                /*
-//                 * Using test DOIs from DataCite, we'll get a 404 when trying to resolve the DOI
-//                 * to a landing page, but the DOI may already exist. An extra check here allows
-//                 * use of DataCite test DOIs. It also changes import slightly in allowing PIDs
-//                 * that exist (and accessible in the PID provider account configured in
-//                 * Dataverse) but aren't findable to be used. That could be the case if, for
-//                 * example, someone was importing a draft dataset from elsewhere.
-//                 *
-//                 * Also note that just replacing the call above with the alreadyExists() call
-//                 * here would break import cases where a DOI is public but not managable with
-//                 * the currently configured PID provider credentials. If this is not a valid use
-//                 * case, the GET above could be removed.
-//                 */
-//                GlobalIdServiceBean globalIdServiceBean = GlobalIdServiceBean.getBean(ds.getProtocol(), ctxt);
-//                if (globalIdServiceBean != null) {
-//                    if (globalIdServiceBean.alreadyExists(ds)) {
-//                        return;
-//                    }
-//                }
-//                throw new CommandExecutionException(
-//                        "Provided PID does not exist. Status code for GET '" + pid + "' is 404.", this);
-//            }
-//
-//        } catch (Exception ex) {
-//            logger.log(Level.WARNING,
-//                    "Error while validating PID at '" + pid + "' for an imported dataset: " + ex.getMessage(), ex);
-//            throw new CommandExecutionException("Cannot validate PID due to an error: " + ex.getMessage(), this);
-//        }
+        try {
+            int responseStatus = client.executeMethod(httpGet);
+
+            if (responseStatus == 404) {
+                /*
+                 * Using test DOIs from DataCite, we'll get a 404 when trying to resolve the DOI
+                 * to a landing page, but the DOI may already exist. An extra check here allows
+                 * use of DataCite test DOIs. It also changes import slightly in allowing PIDs
+                 * that exist (and accessible in the PID provider account configured in
+                 * Dataverse) but aren't findable to be used. That could be the case if, for
+                 * example, someone was importing a draft dataset from elsewhere.
+                 *
+                 * Also note that just replacing the call above with the alreadyExists() call
+                 * here would break import cases where a DOI is public but not managable with
+                 * the currently configured PID provider credentials. If this is not a valid use
+                 * case, the GET above could be removed.
+                 */
+                GlobalIdServiceBean globalIdServiceBean = GlobalIdServiceBean.getBean(ds.getProtocol(), ctxt);
+                if (globalIdServiceBean != null) {
+                    if (globalIdServiceBean.alreadyExists(ds.getGlobalId())) {
+                        return;
+                    }
+                }
+                throw new CommandExecutionException(
+                        "Provided PID does not exist. Status code for GET '" + pid + "' is 404.", this);
+            }
+
+        } catch (Exception ex) {
+            logger.log(Level.WARNING,
+                    "Error while validating PID at '" + pid + "' for an imported dataset: " + ex.getMessage(), ex);
+            throw new CommandExecutionException("Cannot validate PID due to an error: " + ex.getMessage(), this);
+        }
 
     }
     
