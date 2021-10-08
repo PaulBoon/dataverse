@@ -611,8 +611,8 @@ public class JsonPrinter {
                 .add("persistentId", df.getGlobalIdString())
                 .add("pidURL", pidURL)
                 .add("filename", fileName)
-                .add("contentType", df.getContentType())            
-                .add("filesize", df.getFilesize())            
+                .add("contentType", df.getContentType())
+                .add("filesize", df.getFilesize())
                 .add("description", df.getDescription())
                 .add("embargo", embargo)
                 //.add("released", df.isReleased())
@@ -805,10 +805,9 @@ public class JsonPrinter {
                     .add("name", aFacet.getDatasetFieldType().getDisplayName());
     }
 
-    public static JsonObjectBuilder json(Embargo embargo){
-        return jsonObjectBuilder()
-                .add("dateAvailable", embargo.getDateAvailable().toString())
-                .add("reason", embargo.getReason());
+    public static JsonObjectBuilder json(Embargo embargo) {
+        return jsonObjectBuilder().add("dateAvailable", embargo.getDateAvailable().toString()).add("reason",
+                embargo.getReason());
     }
 
     public static JsonObjectBuilder json(License license) {

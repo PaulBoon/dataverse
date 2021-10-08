@@ -463,11 +463,6 @@ public class SettingsServiceBean {
          * ability/permission necessary to publish the dataset
          */
         SendNotificationOnDatasetCreation,
-        /**
-         * Configurable text for alert/info message on passwordreset.xhtml when users are required to update their password.
-         */
-        CustomPasswordResetAlertIntro,
-        CustomPasswordResetButton,
         /** This setting enables Embargo capabilities in Dataverse and sets the maximum Embargo duration allowed.
          * 0 or not set: new embargoes disabled
          * -1: embargo enabled, no time limit

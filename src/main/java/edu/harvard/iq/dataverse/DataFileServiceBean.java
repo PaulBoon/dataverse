@@ -1648,4 +1648,9 @@ public class DataFileServiceBean implements java.io.Serializable {
     public boolean isActivelyEmbargoed(FileMetadata fm) {
         return FileUtil.isActivelyEmbargoed(fm);
     }
+
+    public Embargo findEmbargo(Long id) {
+        DataFile d = find(id);
+        return d.getEmbargo();
+    }
 }

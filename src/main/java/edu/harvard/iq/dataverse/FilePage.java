@@ -57,6 +57,8 @@ import javax.faces.view.ViewScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.validation.ConstraintViolation;
+
+import org.primefaces.PrimeFaces;
 import org.primefaces.component.tabview.TabView;
 import org.primefaces.event.TabChangeEvent;
 
@@ -1022,20 +1024,24 @@ public class FilePage implements java.io.Serializable {
     }
 
     public void setRemoveEmbargo(boolean removeEmbargo) {
+        boolean existing = this.removeEmbargo;
         this.removeEmbargo = removeEmbargo;
-        if(removeEmbargo) {
-            logger.info("Setting empty embargo");
-            selectionEmbargo= new Embargo(null, null);
-        } else {
-            selectionEmbargo= new Embargo();
+        if (existing != this.removeEmbargo) {
+            logger.info("State flip");
+            selectionEmbargo = new Embargo();
+            if (removeEmbargo) {
+                selectionEmbargo = new Embargo(null, null);
+            }
         }
+        PrimeFaces.current().resetInputs("fileForm:embargoInputs");
     }
     
     public String saveEmbargo() {
-        // Todo - add validation and.or separate delete from save of a new embargo
-        if (selectionEmbargo.getDateAvailable() == null && selectionEmbargo.getReason() == null) {
-            selectionEmbargo = null;
+        
+        if(isRemoveEmbargo() || (selectionEmbargo.getDateAvailable()==null && selectionEmbargo.getReason()==null)) {
+            selectionEmbargo=null;
         }
+        
         Embargo emb = null;
         // Note: this.fileMetadata.getDataFile() is not the same object as this.file.
         // (Not sure there's a good reason for this other than that's the way it is.)
@@ -1071,8 +1077,15 @@ public class FilePage implements java.io.Serializable {
         return returnToDraftVersion();
     }
     
-    public void clearFileMetadataSelectedForEmbargoPopup() {
+    public void clearEmbargoPopup() {
         setRemoveEmbargo(false);
+        selectionEmbargo = new Embargo();
+        PrimeFaces.current().resetInputs("fileForm:embargoInputs");
+    }
+    
+    public void clearSelectionEmbargo() {
+        selectionEmbargo = new Embargo();
+        PrimeFaces.current().resetInputs("fileForm:embargoInputs");
     }
     
     public boolean isCantRequestDueToEmbargo() {
@@ -1091,20 +1104,4 @@ public class FilePage implements java.io.Serializable {
             return BundleUtil.getStringFromBundle("embargoed.willbeuntil");
         }
     }
-    
-    
-    public void validateEmbargoDate(FacesContext context, UIComponent component, Object value)
-            throws ValidatorException {
-        if (!removeEmbargo) {
-            if (!settingsWrapper.isValidEmbargoDate(selectionEmbargo)) {
-                String minDate = settingsWrapper.getMinEmbargoDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                String maxDate= settingsWrapper.getMaxEmbargoDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                FacesMessage msg = new FacesMessage(BundleUtil.getStringFromBundle("embargo.date.invalid", Arrays.asList(minDate, maxDate)));
-                msg.setSeverity(FacesMessage.SEVERITY_ERROR);
-                throw new ValidatorException(msg);
-            }
-        }
-    }
-    
-
 }
