@@ -1,6 +1,5 @@
 package edu.harvard.iq.dataverse;
 
-import edu.harvard.iq.dataverse.api.FetchException;
 import edu.harvard.iq.dataverse.provenance.ProvPopupFragmentBean;
 import edu.harvard.iq.dataverse.api.AbstractApiBean;
 import edu.harvard.iq.dataverse.authorization.AuthenticationServiceBean;
@@ -62,7 +61,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -89,14 +87,12 @@ import javax.faces.event.ValueChangeEvent;
 import javax.faces.view.ViewScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.json.Json;
-import javax.json.JsonArray;
 import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonString;
 
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.file.UploadedFile;
+
+import javax.persistence.NoResultException;
 import javax.validation.ConstraintViolation;
 import org.apache.commons.httpclient.HttpClient;
 //import org.primefaces.context.RequestContext;
@@ -372,8 +368,8 @@ public class DatasetPage implements java.io.Serializable {
     public License getSelectedLicenseById(){
         try {
             return licenseServiceBean.getById(licenseId);
-        } catch (FetchException e) {
-            logger.log(Level.SEVERE,"Exception: " + e.getMessage());
+        } catch (NoResultException e) {
+            logger.log(Level.WARNING, "License with ID {0} doesn't exist.", licenseId);
         }
         return null;
     }
@@ -1663,7 +1659,7 @@ public class DatasetPage implements java.io.Serializable {
         selectedTemplate = (Template) event.getNewValue();
         if (selectedTemplate != null) {
             //then create new working version from the selected template
-            workingVersion.updateDefaultValuesFromTemplate(selectedTemplate, licenseServiceBean.getDefault());
+            workingVersion.updateDefaultValuesFromTemplate(selectedTemplate);
             updateDatasetFieldInputLevels();
         } else {
             workingVersion.initDefaultValues(licenseServiceBean.getDefault());
@@ -2043,7 +2039,7 @@ public class DatasetPage implements java.io.Serializable {
                         selectedTemplate = testT;
                     }
                 }
-                workingVersion = dataset.getEditVersion(selectedTemplate, null, licenseServiceBean.getDefault());
+                workingVersion = dataset.getEditVersion(selectedTemplate, null);
                 updateDatasetFieldInputLevels();
             } else {
                 workingVersion = dataset.getCreateVersion(licenseServiceBean.getDefault());
@@ -2479,7 +2475,7 @@ public class DatasetPage implements java.io.Serializable {
             dataset = datasetService.find(dataset.getId());
         }
         workingVersion = dataset.getEditVersion();
-        clone = workingVersion.cloneDatasetVersion(licenseServiceBean.getDefault());
+        clone = workingVersion.cloneDatasetVersion();
         if (editMode == EditMode.INFO) {
             // ?
         } else if (editMode == EditMode.FILE) {
@@ -3598,8 +3594,8 @@ public class DatasetPage implements java.io.Serializable {
             logger.log(Level.SEVERE, "CommandException, when attempting to update the dataset: " + ex.getMessage(), ex);
             populateDatasetUpdateFailureMessage();
             return returnToDraftVersion();
-        } catch (FetchException e) {
-            logger.log(Level.SEVERE,"Exception: " + e.getMessage());
+        } catch (NoResultException e) {
+            logger.log(Level.SEVERE,"License with ID {0} doesn't exist.", licenseId);
         }
 
         // Have we just deleted some draft datafiles (successfully)?
@@ -3705,7 +3701,7 @@ public class DatasetPage implements java.io.Serializable {
      *
      * @param editVersion
      */
-    private void setLicense(DatasetVersion editVersion) throws FetchException {
+    private void setLicense(DatasetVersion editVersion) throws NoResultException {
         TermsOfUseAndAccess terms = editVersion.getTermsOfUseAndAccess();
         if (licenseId == null) {
             terms.setLicense(null);
