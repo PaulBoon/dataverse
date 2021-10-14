@@ -8,7 +8,6 @@ import edu.harvard.iq.dataverse.DvObject;
 import edu.harvard.iq.dataverse.api.Util;
 import edu.harvard.iq.dataverse.dataset.DatasetThumbnail;
 import edu.harvard.iq.dataverse.util.DateUtil;
-import edu.harvard.iq.dataverse.util.FileUtil;
 import edu.harvard.iq.dataverse.util.json.JsonPrinter;
 import edu.harvard.iq.dataverse.util.json.NullSafeJsonBuilder;
 import java.util.ArrayList;

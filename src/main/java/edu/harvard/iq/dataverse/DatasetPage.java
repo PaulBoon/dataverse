@@ -5680,7 +5680,7 @@ public class DatasetPage implements java.io.Serializable {
     public String getFieldLanguage(String languages) {
         return fieldService.getFieldLanguage(languages,session.getLocaleCode());
     }
-
+    
     public void setExternalStatus(String status) {
         try {
             dataset = commandEngine.submit(new SetCurationStatusCommand(dvRequestService.getDataverseRequest(), dataset, status));
