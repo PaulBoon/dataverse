@@ -16,13 +16,12 @@ BEGIN
   END;
 
   BEGIN
-    UPDATE termsofuseandaccess
-    SET license_id = (SELECT license.id FROM license WHERE license.name = 'CC0')
-    WHERE termsofuseandaccess.license = 'CC0' AND termsofuseandaccess.license_id IS NULL;
+      UPDATE termsofuseandaccess
+        SET license_id = (SELECT license.id FROM license WHERE license.name = 'CC0')
+        WHERE termsofuseandaccess.license = 'CC0' AND termsofuseandaccess.license_id IS NULL;
   EXCEPTION
-    WHEN undefined_column THEN RAISE NOTICE 'termsofuseandaccess.license column does not exist, no licenses to migrate';
+    WHEN undefined_column THEN RAISE NOTICE 'license is not in table - new instance';
   END;
 
 END $$;
-
 ALTER TABLE termsofuseandaccess DROP COLUMN IF EXISTS license;
