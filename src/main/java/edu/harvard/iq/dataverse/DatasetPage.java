@@ -3361,7 +3361,7 @@ public class DatasetPage implements java.io.Serializable {
         String retVal = save();
         //And delete them only after the dataset is updated
         for(Embargo emb: orphanedEmbargoes) {
-            embargoService.deleteById(emb.getId());
+            embargoService.deleteById(emb.getId(), ((AuthenticatedUser)session.getUser()).getUserIdentifier());
         }
         return retVal;
 
@@ -5779,13 +5779,12 @@ public class DatasetPage implements java.io.Serializable {
         this.removeEmbargo = removeEmbargo;
         //If we flipped the state, update the selectedEmbargo. Otherwise (e.g. when save is hit) don't make changes
         if(existing != this.removeEmbargo) {
-            logger.info("State flip");
+            logger.fine("State flip");
             selectionEmbargo= new Embargo();
         if(removeEmbargo) {
-            logger.info("Setting empty embargo");
+            logger.fine("Setting empty embargo");
             selectionEmbargo= new Embargo(null, null);
         }
-        logger.info("Resetting in remove");
         PrimeFaces.current().resetInputs("datasetForm:embargoInputs");
         }
     }
@@ -5812,7 +5811,11 @@ public class DatasetPage implements java.io.Serializable {
         } else if (selectedFiles != null && selectedFiles.size() > 0) {
             embargoFMs = selectedFiles;
         }
+        
         if(embargoFMs!=null && !embargoFMs.isEmpty()) {
+            if(selectionEmbargo!=null) {
+                selectionEmbargo = embargoService.merge(selectionEmbargo);
+            }
             for (FileMetadata fmd : workingVersion.getFileMetadatas()) {
                 for (FileMetadata fm : embargoFMs) {
                     if (fm.getDataFile().equals(fmd.getDataFile()) && (isSuperUser()||!fmd.getDataFile().isReleased())) {
@@ -5830,6 +5833,9 @@ public class DatasetPage implements java.io.Serializable {
                 }
             }
         }
+        if (selectionEmbargo != null) {
+            embargoService.save(selectionEmbargo, ((AuthenticatedUser) session.getUser()).getIdentifier());
+        }
         // success message:
         String successMessage = BundleUtil.getStringFromBundle("file.assignedEmbargo.success");
         logger.fine(successMessage);
@@ -5839,7 +5845,7 @@ public class DatasetPage implements java.io.Serializable {
 
         save();
         for(Embargo emb: orphanedEmbargoes) {
-            embargoService.deleteById(emb.getId());
+            embargoService.deleteById(emb.getId(), ((AuthenticatedUser)session.getUser()).getUserIdentifier());
         }
         return returnToDraftVersion();
     }

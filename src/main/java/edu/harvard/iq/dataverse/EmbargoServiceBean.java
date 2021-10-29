@@ -42,19 +42,22 @@ public class EmbargoServiceBean {
         return em.merge(e);
     }
     
-    public Long save(Embargo embargo) {
+    public Long save(Embargo embargo, String userIdentifier) {
         if (embargo.getId() == null) {
             em.persist(embargo);
             em.flush();
         }
-        actionLogSvc.log(new ActionLogRecord(ActionLogRecord.ActionType.Admin, "embargoCreate")
-                .setInfo("id: " + embargo.getId() + " date available: " + embargo.getDateAvailable() + " reason: " + embargo.getReason()));
+        //Not quite from a command, but this action can be done by anyone, so command seems better than Admin or other alternatives
+        actionLogSvc.log(new ActionLogRecord(ActionLogRecord.ActionType.Command, "embargoCreate")
+                .setInfo("id: " + embargo.getId() + " date available: " + embargo.getDateAvailable() + " reason: " + embargo.getReason()).setUserIdentifier(userIdentifier));
         return embargo.getId();
     }
 
-    public int deleteById(long id) {
-        actionLogSvc.log(new ActionLogRecord(ActionLogRecord.ActionType.Admin, "embargoDelete")
-                .setInfo(Long.toString(id)));
+    public int deleteById(long id, String userIdentifier) {
+        //Not quite from a command, but this action can be done by anyone, so command seems better than Admin or other alternatives
+        actionLogSvc.log(new ActionLogRecord(ActionLogRecord.ActionType.Command, "embargoDelete")
+                .setInfo(Long.toString(id))
+                .setUserIdentifier(userIdentifier));
         return em.createNamedQuery("Embargo.deleteById")
                 .setParameter("id", id)
                 .executeUpdate();
