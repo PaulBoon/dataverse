@@ -2398,7 +2398,7 @@ This functionality is disabled when this setting is empty/not set.
 Each set of labels is identified by a curationLabelSet name and a JSON Array of the labels allowed in that set.
 
 ``curl -X PUT -d '{"Standard Process":["Author contacted", "Privacy Review", "Awaiting paper publication", "Final Approval"], "Alternate Process":["State 1","State 2","State 3"]}' http://localhost:8080/api/admin/settings/:AllowedCurationLabels``
-:AllowCustomTerms
+:AllowCustomTermsOfUse
 +++++++++++++++++
 
 By default, custom terms of data use and access can be specified after selecting "Custom Terms" from the License/DUA dropdown on the Terms tab. When ``:AllowCustomTerms`` is  set to ``false`` the "Custom Terms" item is not made available to the depositor.
@@ -2463,4 +2463,4 @@ For example:
 :ExternalValidationAdminOverride
 ++++++++++++++++++++++++++++++++
 
-When set to ``true``, this setting allows a superuser to publish and/or update Dataverse collections and datasets bypassing the external validation checks (specified by the settings above). In an event where an external script is reporting validation failures that appear to be in error, this option gives an admin with superuser privileges a quick way to publish the dataset or update a collection for the user. 
+When set to ``true``, this setting allows a superuser to publish and/or update Dataverse collections and datasets bypassing the external validation checks (specified by the settings above). In an event where an external script is reporting validation failures that appear to be in error, this option gives an admin with superuser privileges a quick way to publish the dataset or update a collection for the user.

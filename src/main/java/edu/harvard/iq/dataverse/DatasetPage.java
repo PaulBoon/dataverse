@@ -244,11 +244,11 @@ public class DatasetPage implements java.io.Serializable {
     @Inject
     MakeDataCountLoggingServiceBean mdcLogService;
     @Inject
-    LicenseServiceBean licenseServiceBean;
-    @Inject
     DataverseHeaderFragment dataverseHeaderFragment;
-    @Inject
+    @Inject 
     EmbargoServiceBean embargoService;
+    @Inject
+    LicenseServiceBean licenseServiceBean;
 
     private Dataset dataset = new Dataset();
 
@@ -5816,7 +5816,7 @@ public class DatasetPage implements java.io.Serializable {
         } else if (selectedFiles != null && selectedFiles.size() > 0) {
             embargoFMs = selectedFiles;
         }
-        
+
         if(embargoFMs!=null && !embargoFMs.isEmpty()) {
             if(selectionEmbargo!=null) {
                 selectionEmbargo = embargoService.merge(selectionEmbargo);
