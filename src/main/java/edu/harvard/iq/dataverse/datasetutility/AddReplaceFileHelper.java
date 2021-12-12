@@ -14,6 +14,7 @@ import edu.harvard.iq.dataverse.DatasetServiceBean;
 import edu.harvard.iq.dataverse.DatasetVersion;
 import edu.harvard.iq.dataverse.EjbDataverseEngine;
 import edu.harvard.iq.dataverse.FileMetadata;
+import edu.harvard.iq.dataverse.LicenseServiceBean;
 import edu.harvard.iq.dataverse.PermissionServiceBean;
 import edu.harvard.iq.dataverse.api.Util;
 import edu.harvard.iq.dataverse.api.Files;
@@ -129,7 +130,8 @@ public class AddReplaceFileHelper{
     private PermissionServiceBean permissionService;
     private EjbDataverseEngine commandEngine;
     private SystemConfig systemConfig;
-    
+    private LicenseServiceBean licenseServiceBean;
+
     // -----------------------------------
     // Instance variables directly added
     // -----------------------------------
@@ -262,7 +264,8 @@ public class AddReplaceFileHelper{
                             DataFileServiceBean fileService,
                             PermissionServiceBean permissionService,
                             EjbDataverseEngine commandEngine,
-                            SystemConfig systemConfig){
+                            SystemConfig systemConfig,
+                            LicenseServiceBean licenseServiceBean){
 
         // ---------------------------------
         // make sure DataverseRequest isn't null and has a user
@@ -304,7 +307,8 @@ public class AddReplaceFileHelper{
         this.permissionService = permissionService;
         this.commandEngine = commandEngine;
         this.systemConfig = systemConfig;
-        
+        this.licenseServiceBean = licenseServiceBean;
+
         
         
         initErrorHandling();
@@ -2162,7 +2166,7 @@ public class AddReplaceFileHelper{
                         .add( "message", msg ).build()
                 ).type(MediaType.APPLICATION_JSON_TYPE).build();
     }
-    
+
 } // end class
   /*
     DatasetPage sequence:

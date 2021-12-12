@@ -313,19 +313,16 @@ public class Template implements Serializable {
         return dsf;
     }
 
-    public Template cloneNewTemplate(Template source) {
+    public Template cloneNewTemplate(Template source, License license) {
         Template newTemplate = new Template();
         Template latestVersion = source;
         //if the latest version has values get them copied over
         if (latestVersion.getDatasetFields() != null && !latestVersion.getDatasetFields().isEmpty()) {
             newTemplate.setDatasetFields(newTemplate.copyDatasetFields(source.getDatasetFields()));
         }
-        TermsOfUseAndAccess terms;
+        TermsOfUseAndAccess terms = null;
         if(source.getTermsOfUseAndAccess() != null){
             terms = source.getTermsOfUseAndAccess().copyTermsOfUseAndAccess();
-        } else {
-            terms = new TermsOfUseAndAccess();
-            terms.setLicense(TermsOfUseAndAccess.defaultLicense);
         }
         newTemplate.setTermsOfUseAndAccess(terms);
         return newTemplate;

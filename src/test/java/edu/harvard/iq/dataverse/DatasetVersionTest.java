@@ -4,6 +4,7 @@ import edu.harvard.iq.dataverse.branding.BrandingUtilTest;
 import edu.harvard.iq.dataverse.mocks.MocksFactory;
 import edu.harvard.iq.dataverse.util.json.JsonUtil;
 import java.io.StringReader;
+import java.net.URI;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -71,7 +72,7 @@ public class DatasetVersionTest {
     public void testIsInReview() {
         Dataset ds = MocksFactory.makeDataset();
         
-        DatasetVersion draft = ds.getCreateVersion();
+        DatasetVersion draft = ds.getCreateVersion(null);
         draft.setVersionState(DatasetVersion.VersionState.DRAFT);
         ds.addLock(new DatasetLock(DatasetLock.Reason.InReview, MocksFactory.makeAuthenticatedUser("Lauren", "Ipsumowitch")));
         assertTrue(draft.isInReview());
@@ -90,6 +91,8 @@ public class DatasetVersionTest {
     @Test
     public void testGetJsonLd() throws ParseException {
         Dataset dataset = new Dataset();
+        License license = new License("CC0", "You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.", URI.create("https://creativecommons.org/publicdomain/zero/1.0/"), URI.create("/resources/images/cc0.png"), true);
+        license.setDefault(true);
         dataset.setProtocol("doi");
         dataset.setAuthority("10.5072/FK2");
         dataset.setIdentifier("LK0D1H");
@@ -109,7 +112,7 @@ public class DatasetVersionTest {
         dataverse.setName("LibraScholar");
         dataset.setOwner(dataverse);
         TermsOfUseAndAccess terms = new TermsOfUseAndAccess();
-        terms.setLicense(TermsOfUseAndAccess.License.CC0);
+        terms.setLicense(license);
         datasetVersion.setTermsOfUseAndAccess(terms);
         String jsonLd = datasetVersion.getJsonLd();
         logger.fine("jsonLd: " + JsonUtil.prettyPrint(jsonLd));
@@ -121,7 +124,7 @@ public class DatasetVersionTest {
         assertEquals("https://doi.org/10.5072/FK2/LK0D1H", obj.getString("identifier"));
         assertEquals(null, obj.getString("schemaVersion", null));
         assertEquals("Dataset", obj.getJsonObject("license").getString("@type"));
-        assertEquals("CC0", obj.getJsonObject("license").getString("text"));
+        assertEquals("CC0", obj.getJsonObject("license").getString("name"));
         assertEquals("https://creativecommons.org/publicdomain/zero/1.0/", obj.getJsonObject("license").getString("url"));
         assertEquals("1955-11-05", obj.getString("dateModified"));
         assertEquals("1955-11-05", obj.getString("datePublished"));
@@ -164,7 +167,7 @@ public class DatasetVersionTest {
         dataset.setOwner(dataverse);
 
         TermsOfUseAndAccess terms = new TermsOfUseAndAccess();
-        terms.setLicense(TermsOfUseAndAccess.License.NONE);
+        terms.setLicense(null);
         terms.setTermsOfUse("Call me maybe");
         datasetVersion.setTermsOfUseAndAccess(terms);
 

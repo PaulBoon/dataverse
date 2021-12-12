@@ -28,6 +28,7 @@ import edu.harvard.iq.dataverse.Dataset;
 import edu.harvard.iq.dataverse.DatasetVersion;
 import edu.harvard.iq.dataverse.Embargo;
 import edu.harvard.iq.dataverse.FileMetadata;
+import edu.harvard.iq.dataverse.License;
 import edu.harvard.iq.dataverse.TermsOfUseAndAccess;
 import edu.harvard.iq.dataverse.dataaccess.DataAccess;
 import edu.harvard.iq.dataverse.dataaccess.ImageThumbConverter;
@@ -1483,7 +1484,8 @@ public class FileUtil implements java.io.Serializable  {
         }
         // 1. License and Terms of Use:
         if (datasetVersion.getTermsOfUseAndAccess() != null) {
-            if (!TermsOfUseAndAccess.License.CC0.equals(datasetVersion.getTermsOfUseAndAccess().getLicense())
+            License license = datasetVersion.getTermsOfUseAndAccess().getLicense();
+            if ( license == null || !license.isDefault()
                     && !(datasetVersion.getTermsOfUseAndAccess().getTermsOfUse() == null
                     || datasetVersion.getTermsOfUseAndAccess().getTermsOfUse().equals(""))) {
                 logger.fine("Download popup required because of license or terms of use.");
@@ -1521,7 +1523,7 @@ public class FileUtil implements java.io.Serializable  {
         }
         // 1. License and Terms of Use:
         if (datasetVersion.getTermsOfUseAndAccess() != null) {
-            if (!TermsOfUseAndAccess.License.CC0.equals(datasetVersion.getTermsOfUseAndAccess().getLicense())
+            if (!datasetVersion.getTermsOfUseAndAccess().getLicense().isDefault()
                     && !(datasetVersion.getTermsOfUseAndAccess().getTermsOfUse() == null
                     || datasetVersion.getTermsOfUseAndAccess().getTermsOfUse().equals(""))) {
                 logger.fine("Download popup required because of license or terms of use.");
