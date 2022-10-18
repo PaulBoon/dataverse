@@ -67,7 +67,7 @@
             <artifactId>passay</artifactId>
             <version>1.6.0</version>
         </dependency>
-        
+
         <!-- TECHNICAL DEBT
              For a very long time, in a lots of places people used org.apache.commons.httpclient to access
              HTTP resources, wrap responses in exceptions etc.
@@ -90,6 +90,12 @@
             <groupId>io.gdcc</groupId>
             <artifactId>sword2-server</artifactId>
             <version>1.2.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>apache-mime4j-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Dependency to use sword2-server in our codebase -->
         <dependency>
