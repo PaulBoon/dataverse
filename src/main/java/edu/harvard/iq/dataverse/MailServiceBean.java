@@ -42,6 +42,7 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import edu.harvard.iq.dataverse.settings.JvmSettings;
 import edu.harvard.iq.dataverse.validation.EMailValidator;
 import org.apache.commons.lang3.StringUtils;
 
@@ -92,11 +93,12 @@ public class MailServiceBean implements java.io.Serializable {
     public boolean sendSystemEmail(String to, String subject, String messageText, boolean isHtmlContent) {
 
         boolean sent = false;
-        InternetAddress systemAddress = getSystemAddress(); 
+        InternetAddress systemAddress = getSystemAddress();
+        InternetAddress supportAddress = getSupportAddress();
 
         String body = messageText
-                + (isHtmlContent ? BundleUtil.getStringFromBundle("notification.email.closing.html", Arrays.asList(BrandingUtil.getSupportTeamEmailAddress(systemAddress), BrandingUtil.getSupportTeamName(systemAddress)))
-                        : BundleUtil.getStringFromBundle("notification.email.closing", Arrays.asList(BrandingUtil.getSupportTeamEmailAddress(systemAddress), BrandingUtil.getSupportTeamName(systemAddress))));
+                + (isHtmlContent ? BundleUtil.getStringFromBundle("notification.email.closing.html", Arrays.asList(BrandingUtil.getSupportTeamEmailAddress(supportAddress), BrandingUtil.getSupportTeamName(supportAddress)))
+                        : BundleUtil.getStringFromBundle("notification.email.closing", Arrays.asList(BrandingUtil.getSupportTeamEmailAddress(supportAddress), BrandingUtil.getSupportTeamName(supportAddress))));
 
         logger.fine("Sending email to " + to + ". Subject: <<<" + subject + ">>>. Body: " + body);
         try {
@@ -144,6 +146,13 @@ public class MailServiceBean implements java.io.Serializable {
     public InternetAddress getSystemAddress() {
        String systemEmail = settingsService.getValueForKey(Key.SystemEmail);
        return MailUtil.parseSystemAddress(systemEmail);
+    }
+
+    public InternetAddress getSupportAddress() {
+        String supportEmail = JvmSettings.SUPPORT_EMAIL
+            .lookupOptional()
+            .orElse(settingsService.getValueForKey(SettingsServiceBean.Key.SystemEmail));
+        return MailUtil.parseSystemAddress(supportEmail);
     }
 
     //@Resource(name="mail/notifyMailSession")
