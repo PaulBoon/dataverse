@@ -34,6 +34,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.NonUniqueResultException;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -448,6 +449,7 @@ public class DatasetFieldServiceBean implements java.io.Serializable {
      * @param cvocEntry - the configuration for the DatasetFieldType associated with this term 
      * @param term - the term uri as a string
      */
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
     public void registerExternalTerm(JsonObject cvocEntry, String term) {
         String retrievalUri = cvocEntry.getString("retrieval-uri");
         String prefix = cvocEntry.getString("prefix", null);
@@ -518,6 +520,8 @@ public class DatasetFieldServiceBean implements java.io.Serializable {
                             logger.fine("Wrote value for term: " + term);
                         } catch (JsonException je) {
                             logger.severe("Error retrieving: " + retrievalUri + " : " + je.getMessage());
+                        } catch (PersistenceException e) {
+                            logger.fine("Problem persisting: " + retrievalUri + " : " + e.getMessage());
                         }
                     } else {
                         logger.severe("Received response code : " + statusCode + " when retrieving " + retrievalUri
