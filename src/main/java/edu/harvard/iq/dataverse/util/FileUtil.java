@@ -795,7 +795,7 @@ public class FileUtil implements java.io.Serializable  {
         }
         return "";
     }
-    
+
     public static CreateDataFileResult createDataFiles(DatasetVersion version, InputStream inputStream,
             String fileName, String suppliedContentType, String newStorageIdentifier, String newCheckSum,
             SystemConfig systemConfig)  throws IOException {
@@ -805,7 +805,7 @@ public class FileUtil implements java.io.Serializable  {
         }
         return createDataFiles(version, inputStream, fileName, suppliedContentType, newStorageIdentifier, newCheckSum, checkSumType, systemConfig);
     }
-    
+
     public static CreateDataFileResult createDataFiles(DatasetVersion version, InputStream inputStream, String fileName, String suppliedContentType, String newStorageIdentifier, String newCheckSum, ChecksumType newCheckSumType, SystemConfig systemConfig) throws IOException {
         List<DataFile> datafiles = new ArrayList<>();
 
@@ -816,7 +816,7 @@ public class FileUtil implements java.io.Serializable  {
 
         String warningMessage = null;
 
-        // save the file, in the temporary location for now: 
+        // save the file, in the temporary location for now:
         Path tempFile = null;
 
         Long fileSizeLimit = systemConfig.getMaxFileUploadSizeForStore(version.getDataset().getEffectiveStorageDriverId());
@@ -894,7 +894,7 @@ public class FileUtil implements java.io.Serializable  {
                     datafile = createSingleDataFile(version, unZippedTempFile, finalFileName, MIME_TYPE_UNDETERMINED_DEFAULT, systemConfig.getFileFixityChecksumAlgorithm());
                 } catch (IOException | FileExceedsMaxSizeException ioex) {
                     datafile = null;
-                } 
+                }
 
                 // If we were able to produce an uncompressed file, we'll use it
                 // to create and return a final DataFile; if not, we're not going
@@ -927,14 +927,14 @@ public class FileUtil implements java.io.Serializable  {
                     Charset charset = null;
                     /*
                 	TODO: (?)
-                	We may want to investigate somehow letting the user specify 
+                	We may want to investigate somehow letting the user specify
                 	the charset for the filenames in the zip file...
-                    - otherwise, ZipInputStream bails out if it encounteres a file 
-                	name that's not valid in the current charest (i.e., UTF-8, in 
-                    our case). It would be a bit trickier than what we're doing for 
-                    SPSS tabular ingests - with the lang. encoding pulldown menu - 
+                    - otherwise, ZipInputStream bails out if it encounteres a file
+                	name that's not valid in the current charest (i.e., UTF-8, in
+                    our case). It would be a bit trickier than what we're doing for
+                    SPSS tabular ingests - with the lang. encoding pulldown menu -
                 	because this encoding needs to be specified *before* we upload and
-                    attempt to unzip the file. 
+                    attempt to unzip the file.
                 	        -- L.A. 4.0 beta12
                 	logger.info("default charset is "+Charset.defaultCharset().name());
                 	if (Charset.isSupported("US-ASCII")) {
@@ -943,33 +943,33 @@ public class FileUtil implements java.io.Serializable  {
                     	if (charset != null) {
                        	    logger.info("was able to obtain charset for US-ASCII");
                     	}
-                    
+
                 	 }
                      */
 
-                    /** 
-                     * Perform a quick check for how many individual files are 
-                     * inside this zip archive. If it's above the limit, we can 
-                     * give up right away, without doing any unpacking. 
+                    /**
+                     * Perform a quick check for how many individual files are
+                     * inside this zip archive. If it's above the limit, we can
+                     * give up right away, without doing any unpacking.
                      * This should be a fairly inexpensive operation, we just need
-                     * to read the directory at the end of the file. 
+                     * to read the directory at the end of the file.
                      */
-                    
+
                     if (charset != null) {
                         zipFile = new ZipFile(tempFile.toFile(), charset);
                     } else {
                         zipFile = new ZipFile(tempFile.toFile());
                     }
                     /**
-                     * The ZipFile constructors above will throw ZipException - 
-                     * a type of IOException - if there's something wrong 
+                     * The ZipFile constructors above will throw ZipException -
+                     * a type of IOException - if there's something wrong
                      * with this file as a zip. There's no need to intercept it
                      * here, it will be caught further below, with other IOExceptions,
                      * at which point we'll give up on trying to unpack it and
                      * then attempt to save it as is.
                      */
 
-                    int numberOfUnpackableFiles = 0; 
+                    int numberOfUnpackableFiles = 0;
                     /**
                      * Note that we can't just use zipFile.size(),
                      * unfortunately, since that's the total number of entries,
@@ -985,7 +985,7 @@ public class FileUtil implements java.io.Serializable  {
                             String shortName = entry.getName().replaceFirst("^.*[\\/]", "");
                             // ... and, finally, check if it's a "fake" file - a zip archive entry
                             // created for a MacOS X filesystem element: (these
-                            // start with "._") 
+                            // start with "._")
                             if (!shortName.startsWith("._") && !shortName.startsWith(".DS_Store") && !"".equals(shortName)) {
                                 numberOfUnpackableFiles++;
                                 if (numberOfUnpackableFiles > fileNumberLimit) {
@@ -996,22 +996,22 @@ public class FileUtil implements java.io.Serializable  {
                                     throw new IOException();
                                 }
                                 // In addition to counting the files, we can
-                                // also check the file size while we're here, 
-                                // provided the size limit is defined; if a single 
+                                // also check the file size while we're here,
+                                // provided the size limit is defined; if a single
                                 // file is above the individual size limit, unzipped,
-                                // we give up on unpacking this zip archive as well: 
+                                // we give up on unpacking this zip archive as well:
                                 if (fileSizeLimit != null && entry.getSize() > fileSizeLimit) {
                                     throw new FileExceedsMaxSizeException(MessageFormat.format(BundleUtil.getStringFromBundle("file.addreplace.error.file_exceeds_limit"), bytesToHumanReadable(entry.getSize()), bytesToHumanReadable(fileSizeLimit)));
                                 }
                             }
                         }
                     }
-                    
-                    // OK we're still here - that means we can proceed unzipping. 
-                    
-                    // Close the ZipFile, re-open as ZipInputStream: 
-                    zipFile.close(); 
-                    
+
+                    // OK we're still here - that means we can proceed unzipping.
+
+                    // Close the ZipFile, re-open as ZipInputStream:
+                    zipFile.close();
+
                     if (charset != null) {
                         unZippedIn = new ZipInputStream(new FileInputStream(tempFile.toFile()), charset);
                     } else {
@@ -1032,7 +1032,7 @@ public class FileUtil implements java.io.Serializable  {
                             logger.warning(warningMessage);
                             throw new IOException();
                         }
-                        
+
                         if (zipEntry == null) {
                             break;
                         }
@@ -1065,17 +1065,17 @@ public class FileUtil implements java.io.Serializable  {
                                     String storageIdentifier = generateStorageIdentifier();
                                     File unzippedFile = new File(getFilesTempDirectory() + "/" + storageIdentifier);
                                     Files.copy(unZippedIn, unzippedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                                    // No need to check the size of this unpacked file against the size limit, 
+                                    // No need to check the size of this unpacked file against the size limit,
                                     // since we've already checked for that in the first pass.
-                                    
+
                                     DataFile datafile = createSingleDataFile(version, null, storageIdentifier, shortName,
                                             MIME_TYPE_UNDETERMINED_DEFAULT,
                                             systemConfig.getFileFixityChecksumAlgorithm(), null, false);
 
                                     if (!fileEntryName.equals(shortName)) {
                                         // If the filename looks like a hierarchical folder name (i.e., contains slashes and backslashes),
-                                        // we'll extract the directory name; then subject it to some "aggressive sanitizing" - strip all 
-                                        // the leading, trailing and duplicate slashes; then replace all the characters that 
+                                        // we'll extract the directory name; then subject it to some "aggressive sanitizing" - strip all
+                                        // the leading, trailing and duplicate slashes; then replace all the characters that
                                         // don't pass our validation rules.
                                         String directoryName = fileEntryName.replaceFirst("[\\\\/][\\\\/]*[^\\\\/]*$", "");
                                         directoryName = StringUtil.sanitizeFileDirectory(directoryName, true);
@@ -1094,7 +1094,7 @@ public class FileUtil implements java.io.Serializable  {
                                         try {
                                             recognizedType = determineFileType(unzippedFile, shortName);
                                             // null the File explicitly, to release any open FDs:
-                                            unzippedFile = null; 
+                                            unzippedFile = null;
                                             logger.fine("File utility recognized unzipped file as " + recognizedType);
                                             if (recognizedType != null && !recognizedType.equals("")) {
                                                 datafile.setContentType(recognizedType);
@@ -1181,7 +1181,7 @@ public class FileUtil implements java.io.Serializable  {
                         String absolutePathName = finalFile.getParent();
                         if (absolutePathName != null) {
                             if (absolutePathName.length() > rezipFolder.toString().length()) {
-                                // This file lives in a subfolder - we want to 
+                                // This file lives in a subfolder - we want to
                                 // preserve it in the FileMetadata:
                                 directoryName = absolutePathName.substring(rezipFolder.toString().length() + 1);
 
@@ -1249,14 +1249,14 @@ public class FileUtil implements java.io.Serializable  {
                 logger.fine("Supplied type: " + suppliedContentType + ", finalType: " + finalType);
             }
         }
-        // Finally, if none of the special cases above were applicable (or 
-        // if we were unable to unpack an uploaded file, etc.), we'll just 
+        // Finally, if none of the special cases above were applicable (or
+        // if we were unable to unpack an uploaded file, etc.), we'll just
         // create and return a single DataFile:
         File newFile = null;
         if (tempFile != null) {
             newFile = tempFile.toFile();
         }
-        
+
 
         DataFile datafile = createSingleDataFile(version, newFile, newStorageIdentifier, fileName, finalType, newCheckSumType, newCheckSum);
         File f = null;
@@ -1276,7 +1276,7 @@ public class FileUtil implements java.io.Serializable  {
 
         return CreateDataFileResult.error(fileName, finalType);
     }   // end createDataFiles
-    
+
 
 	public static boolean useRecognizedType(String suppliedContentType, String recognizedType) {
 		// is it any better than the type that was supplied to us,
@@ -1326,9 +1326,9 @@ public class FileUtil implements java.io.Serializable  {
             Long fileSize = tempFile.toFile().length();
             if (fileSizeLimit != null && fileSize > fileSizeLimit) {
                 try {tempFile.toFile().delete();} catch (Exception ex) {}
-                throw new FileExceedsMaxSizeException (MessageFormat.format(BundleUtil.getStringFromBundle("file.addreplace.error.file_exceeds_limit"), bytesToHumanReadable(fileSize), bytesToHumanReadable(fileSizeLimit)));  
+                throw new FileExceedsMaxSizeException (MessageFormat.format(BundleUtil.getStringFromBundle("file.addreplace.error.file_exceeds_limit"), bytesToHumanReadable(fileSize), bytesToHumanReadable(fileSizeLimit)));
             }
-            
+
             return tempFile.toFile();
         }
         throw new IOException("Failed to save uploaded file.");
@@ -1479,16 +1479,16 @@ public class FileUtil implements java.io.Serializable  {
                 return false;
         }
     }
-    
+
     public static String getFilesTempDirectory() {
-        
+
         String filesRootDirectory = JvmSettings.FILES_DIRECTORY.lookup();
         String filesTempDirectory = filesRootDirectory + "/temp";
 
         if (!Files.exists(Paths.get(filesTempDirectory))) {
-            /* Note that "createDirectories()" must be used - not 
-             * "createDirectory()", to make sure all the parent 
-             * directories that may not yet exist are created as well. 
+            /* Note that "createDirectories()" must be used - not
+             * "createDirectory()", to make sure all the parent
+             * directories that may not yet exist are created as well.
              */
             try {
                 Files.createDirectories(Paths.get(filesTempDirectory));
@@ -1860,7 +1860,7 @@ public class FileUtil implements java.io.Serializable  {
     	}
     	return s3io;
     }
-    
+
     public static void validateDataFileChecksum(DataFile dataFile) throws IOException {
         DataFile.ChecksumType checksumType = dataFile.getChecksumType();
         if (checksumType == null) {
@@ -2216,5 +2216,30 @@ public class FileUtil implements java.io.Serializable  {
         }
         return false;
     }
+
+    public static boolean isActivelyRetended(DataFile df) {
+        Retention e = df.getRetention();
+        if (e != null) {
+            LocalDate endDate = e.getDateUnavailable();
+            if (endDate != null && endDate.isBefore(LocalDate.now())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isActivelyRetended(FileMetadata fileMetadata) {
+        return isActivelyRetended(fileMetadata.getDataFile());
+    }
+
+    public static boolean isActivelyRetended(List<FileMetadata> fmdList) {
+        for (FileMetadata fmd : fmdList) {
+            if (isActivelyRetended(fmd)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     
 }

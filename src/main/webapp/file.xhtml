@@ -72,6 +72,7 @@
                                         <!-- DATASET Publication Status -->
                                         <h:outputText value="#{bundle['dataset.versionUI.draft']}" styleClass="label label-primary" rendered="#{FilePage.fileMetadata.datasetVersion.draft}"/>
                                         <h:outputText value="#{bundle['embargoed']}" styleClass="label label-primary" rendered="#{dataFileServiceBean.isActivelyEmbargoed(FilePage.fileMetadata)}"/>
+                                        <h:outputText value="#{bundle['retended']}" styleClass="label label-primary" rendered="#{dataFileServiceBean.isActivelyRetended(FilePage.fileMetadata)}"/>
                                         <h:outputText value="#{bundle['dataset.versionUI.inReview']}" styleClass="label label-success" rendered="#{FilePage.fileMetadata.datasetVersion.inReview}"/>
                                         <h:outputText value="#{bundle['dataset.versionUI.unpublished']}" styleClass="label label-warning" rendered="#{!FilePage.fileMetadata.datasetVersion.dataset.released}"/>   
                                         <h:outputText value="#{bundle['dataset.versionUI.deaccessioned']}" styleClass="label label-danger" rendered="#{FilePage.fileMetadata.datasetVersion.deaccessioned}"/>
@@ -364,7 +365,7 @@
                                         <ui:param name="fileDownloadService" value="#{FilePage.fileDownloadService}"/>
                                         <ui:param name="lockedFromDownload" value="#{FilePage.lockedFromDownload}"/>
                                     </ui:include>
-                                </ui:fragment>   
+                                </ui:fragment>
                                 <!-- PREVIEW EXTERNAL TOOL -->
                                 <ui:fragment rendered="#{(!FilePage.downloadPopupRequired) or (FilePage.downloadPopupRequired and FilePage.termsMet)}">
                                 <div class="btn-toolbar margin-bottom" role="toolbar" aria-label="#{bundle['file.previewTab.button.label']}">
@@ -384,12 +385,12 @@
                                                 </li>
                                             </ui:repeat>
                                         </ul>
-                                        </ui:fragment>                                        
+                                        </ui:fragment>
                                     </div>
                                     <!-- END: Preview Button Group -->
                                     <div class="btn-group" jsf:rendered="#{(FilePage.toolsWithPreviews.size() > 0 or FilePage.queryTools.size() > 0) and fileDownloadHelper.canDownloadFile(FilePage.fileMetadata)}">
                                         <!-- Modular/Configured Explore Tool -->
-                                        <h:commandLink rendered="#{!downloadPopupRequired}" 
+                                        <h:commandLink rendered="#{!downloadPopupRequired}"
                                                          type="submit"
                                                          styleClass="btn btn-default #{(FilePage.fileMetadata.dataFile.ingestInProgress) ? 'disabled' : ''}"
                                                          disabled="#{(FilePage.fileMetadata.dataFile.ingestInProgress or lockedFromDownload) ? 'disabled' : ''}"
@@ -560,6 +561,13 @@
                                                         <td>#{FilePage.file.embargo.reason}
                                                         </td>
                                                     </tr>
+                                                    <tr id="fileRetentionBlock" jsf:rendered="#{!(empty FilePage.file.retention) and ! (empty FilePage.file.retention.reason)}">
+                                                        <th scope="row">
+                                                            #{bundle['file.metadataTab.fileMetadata.retentionReason.label']}
+                                                        </th>
+                                                        <td>#{FilePage.file.retention.reason}
+                                                        </td>
+                                                    </tr>
                                                     <tr id="fileSizeBlock" jsf:rendered="#{!(empty FilePage.file.friendlySize)}">
                                                         <th scope="row">
                                                             #{bundle['file.metadataTab.fileMetadata.size.label']}
@@ -658,7 +666,7 @@
                             <ui:param name="someActivelyEmbargoedFiles" value="#{FilePage.cantRequestDueToEmbargo}"/>
                             <ui:param name="fileDownloadService" value="#{FilePage.fileDownloadService}"/>
                         </ui:include>
-                    </p:dialog>                    
+                    </p:dialog>
                     <p:dialog id="mapDataDialog" header="#{bundle['file.mapData.unpublished.header']}" widgetVar="mapDataDialog" modal="true">
                         <p class="help-block">
                             <span class="text-danger"><span class="glyphicon glyphicon-exclamation-sign"/> #{bundle['file.mapData.unpublished.message']}</span>
@@ -668,7 +676,7 @@
                                 #{bundle.close}
                             </button>
                         </div>
-                    </p:dialog>                    
+                    </p:dialog>
                     <ui:include rendered="#{systemConfig.provCollectionEnabled}" src="provenance-popups-fragment.xhtml">
                         <ui:param name="saveInPopup" value="true"/>
                     </ui:include>

@@ -37,7 +37,7 @@ import jakarta.persistence.TypedQuery;
  * @author Leonid Andreev
  * 
  * Basic skeleton of the new DataFile service for DVN 4.0
- * 
+ *
  */
 
 @Stateless
@@ -58,7 +58,7 @@ public class DataFileServiceBean implements java.io.Serializable {
     IngestServiceBean ingestService;
 
     @EJB EmbargoServiceBean embargoService;
-    
+
     @PersistenceContext(unitName = "VDCNet-ejbPU")
     private EntityManager em;
     
@@ -145,7 +145,7 @@ public class DataFileServiceBean implements java.io.Serializable {
         return (DataFile)query.getSingleResult();
         
     }*/
-    
+
     public DataFile findByGlobalId(String globalId) {
             return (DataFile) dvObjectService.findByGlobalId(globalId, DvObject.DType.DataFile);
     }
@@ -565,7 +565,7 @@ public class DataFileServiceBean implements java.io.Serializable {
         
         return dataFile;
     }
-    
+
     public List<DataFile> findIngestsInProgress() {
         if ( em.isOpen() ) {
             String qr = "select object(o) from DataFile as o where o.ingestStatus =:scheduledStatusCode or o.ingestStatus =:progressStatusCode order by o.id";
@@ -773,7 +773,7 @@ public class DataFileServiceBean implements java.io.Serializable {
         }
         
         // If thumbnails are not even supported for this class of files, 
-        // there's notthing to talk about:      
+        // there's notthing to talk about:
         if (!FileUtil.isThumbnailSupported(file)) {
             return false;
         }
@@ -788,12 +788,12 @@ public class DataFileServiceBean implements java.io.Serializable {
          is more important... 
         
         */
-                
-        
+
+
        if (ImageThumbConverter.isThumbnailAvailable(file)) {
            file = this.find(file.getId());
            file.setPreviewImageAvailable(true);
-           this.save(file); 
+           this.save(file);
            return true;
        }
 
@@ -1202,5 +1202,9 @@ public class DataFileServiceBean implements java.io.Serializable {
     public Embargo findEmbargo(Long id) {
         DataFile d = find(id);
         return d.getEmbargo();
+    }
+
+    public boolean isActivelyRetended(FileMetadata fm) {
+        return FileUtil.isActivelyRetended(fm);
     }
 }
