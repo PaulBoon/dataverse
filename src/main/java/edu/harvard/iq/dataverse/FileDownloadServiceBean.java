@@ -219,7 +219,7 @@ public class FileDownloadServiceBean implements java.io.Serializable {
             logger.warning("Exception writing GuestbookResponse for file: " + guestbookResponse.getDataFile().getId() + " : " + e.getLocalizedMessage());
         }
     }
-    
+
     // The "guestBookRecord(s)AlreadyWritten" parameter in the 2 methods 
     // below (redirectToBatchDownloadAPI() and redirectToDownloadAPI(), for the 
     // multiple- and single-file downloads respectively) are passed to the 
@@ -298,7 +298,8 @@ public class FileDownloadServiceBean implements java.io.Serializable {
         ApiToken apiToken = null;
         User user = session.getUser();
         DatasetVersion version = fmd.getDatasetVersion();
-        if (version.isDraft() || fmd.getDatasetVersion().isDeaccessioned() || (fmd.getDataFile().isRestricted()) || (FileUtil.isActivelyEmbargoed(fmd))) {
+        if (version.isDraft() || fmd.getDatasetVersion().isDeaccessioned() || (fmd.getDataFile().isRestricted())
+                || (FileUtil.isActivelyEmbargoed(fmd)) || (FileUtil.isActivelyRetended(fmd))) {
             apiToken = getApiToken(user);
         }
         DataFile dataFile = null;
@@ -498,7 +499,7 @@ public class FileDownloadServiceBean implements java.io.Serializable {
             }             
         }        
         return false;
-    }    
+    }
     
     public void sendRequestFileAccessNotification(DataFile datafile, AuthenticatedUser requestor) {
         permissionService.getUsersWithPermissionOn(Permission.ManageFilePermissions, datafile).stream().forEach((au) -> {
@@ -571,5 +572,5 @@ public class FileDownloadServiceBean implements java.io.Serializable {
             
         return null; 
     }
-    
+
 }
