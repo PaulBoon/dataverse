@@ -1204,7 +1204,7 @@ public class DataFileServiceBean implements java.io.Serializable {
         return d.getEmbargo();
     }
 
-    public boolean isActivelyRetended(FileMetadata fm) {
-        return FileUtil.isActivelyRetended(fm);
+    public boolean isRetentionExpired(FileMetadata fm) {
+        return FileUtil.isRetentionExpired(fm);
     }
 }

@@ -413,7 +413,7 @@ public class SearchServiceBean {
             String identifierOfDataverse = (String) solrDocument.getFieldValue(SearchFields.IDENTIFIER_OF_DATAVERSE);
             String nameOfDataverse = (String) solrDocument.getFieldValue(SearchFields.DATAVERSE_NAME);
             Long embargoEndDate = (Long) solrDocument.getFieldValue(SearchFields.EMBARGO_END_DATE);
-            Long retentionStartDate = (Long) solrDocument.getFieldValue(SearchFields.RETENTION_START_DATE);
+            Long retentionEndDate = (Long) solrDocument.getFieldValue(SearchFields.RETENTION_END_DATE);
             //
             Boolean datasetValid = (Boolean) solrDocument.getFieldValue(SearchFields.DATASET_VALID);
             
@@ -488,7 +488,7 @@ public class SearchServiceBean {
             }
 
             solrSearchResult.setEmbargoEndDate(embargoEndDate);
-            solrSearchResult.setRetentionStartDate(retentionStartDate);
+            solrSearchResult.setRetentionEndDate(retentionEndDate);
 
             /**
              * @todo start using SearchConstants class here
