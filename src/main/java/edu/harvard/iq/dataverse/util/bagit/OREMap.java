@@ -39,13 +39,31 @@ import jakarta.json.JsonValue;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+/**
+ * This class is used to generate a JSON-LD representation of a Dataverse object leveraging the OAI_ORE and other community vocabularies. As of v1.0.0,
+ * the format is being versioned and ANY CHANGES TO THE OUTPUT of this class must be reflected in a version increment (see DATAVERSE_ORE_FORMAT_VERSION).
+ * 
+ * The OREMap class is intended to record ALL the information needed to recreate an existing Dataverse dataset. As of v1.0.0, this is true with the 
+ * exception that auxiliary files are not referenced in the OREMap. While many types of auxiliary files will be regenerated automatically based on datafile
+ *  contents, Dataverse now allows manually uploaded auxiliary files and these cannot be reproduced solely from the dataset/datafile contents. 
+ */
 public class OREMap {
 
+    //Required Services
     static SettingsServiceBean settingsService;
     static DatasetFieldServiceBean datasetFieldService;
+    static SystemConfig systemConfig;
+    
     private static final Logger logger = Logger.getLogger(OREMap.class.getCanonicalName());
     
     public static final String NAME = "OREMap";
+    
+    //NOTE: Update this value whenever the output of this class is changed
+    private static final String DATAVERSE_ORE_FORMAT_VERSION = "Dataverse OREMap Format v1.0.0";
+    private static final String DATAVERSE_SOFTWARE_NAME = "Dataverse";
+    private static final String DATAVERSE_SOFTWARE_URL = "https://github.com/iqss/dataverse";
+    
+    
     private Map<String, String> localContext = new TreeMap<String, String>();
     private DatasetVersion version;
     private Boolean excludeEmail = null;
@@ -114,6 +132,18 @@ public class OREMap {
                 .add(JsonLDTerm.schemaOrg("name").getLabel(), version.getTitle())
                 .add(JsonLDTerm.schemaOrg("dateModified").getLabel(), version.getLastUpdateTime().toString());
         addIfNotNull(aggBuilder, JsonLDTerm.schemaOrg("datePublished"), dataset.getPublicationDateFormattedYYYYMMDD());
+        //Add version state info - DRAFT, RELEASED, DEACCESSIONED, ARCHIVED with extra info for DEACCESIONED
+        VersionState vs = version.getVersionState();
+        if(vs.equals(VersionState.DEACCESSIONED)) {
+            JsonObjectBuilder deaccBuilder = Json.createObjectBuilder();
+            deaccBuilder.add(JsonLDTerm.schemaOrg("name").getLabel(), vs.name());
+            deaccBuilder.add(JsonLDTerm.DVCore("reason").getLabel(), version.getVersionNote());
+            addIfNotNull(deaccBuilder, JsonLDTerm.DVCore("forwardUrl"), version.getArchiveNote());
+            aggBuilder.add(JsonLDTerm.schemaOrg("creativeWorkStatus").getLabel(), deaccBuilder);
+            
+        } else {
+            aggBuilder.add(JsonLDTerm.schemaOrg("creativeWorkStatus").getLabel(), vs.name());
+        }
 
         TermsOfUseAndAccess terms = version.getTermsOfUseAndAccess();
         if (terms.getLicense() != null) {
@@ -205,6 +235,17 @@ public class OREMap {
                     }
                     aggRes.add(JsonLDTerm.DVCore("embargoed").getLabel(), embargoObject);
                 }
+                Retention retention = df.getRetention();
+                if(retention!=null) {
+                    String date = retention.getFormattedDateUnavailable();
+                    String reason= retention.getReason();
+                    JsonObjectBuilder retentionObject = Json.createObjectBuilder();
+                    retentionObject.add(JsonLDTerm.DVCore("dateUnavailable").getLabel(), date);
+                    if(reason!=null) {
+                        retentionObject.add(JsonLDTerm.DVCore("reason").getLabel(), reason);
+                    }
+                    aggRes.add(JsonLDTerm.DVCore("retained").getLabel(), retentionObject);
+                }
                 addIfNotNull(aggRes, JsonLDTerm.directoryLabel, fmd.getDirectoryLabel());
                 addIfNotNull(aggRes, JsonLDTerm.schemaOrg("version"), fmd.getVersion());
                 addIfNotNull(aggRes, JsonLDTerm.datasetVersionId, fmd.getDatasetVersion().getId());
@@ -269,10 +310,23 @@ public class OREMap {
             return aggBuilder.add("@context", contextBuilder.build());
         } else {
             // Now create the overall map object with it's metadata
+            
+            //Start with a reference to the Dataverse software
+            JsonObjectBuilder dvSoftwareBuilder = Json.createObjectBuilder()
+                    .add("@type", JsonLDTerm.schemaOrg("SoftwareApplication").getLabel())
+                    .add(JsonLDTerm.schemaOrg("name").getLabel(), DATAVERSE_SOFTWARE_NAME)
+                    .add(JsonLDTerm.schemaOrg("version").getLabel(), systemConfig.getVersion(true))
+                    .add(JsonLDTerm.schemaOrg("url").getLabel(), DATAVERSE_SOFTWARE_URL);
+            
+            //Now the OREMAP object itself
             JsonObjectBuilder oremapBuilder = Json.createObjectBuilder()
                     .add(JsonLDTerm.dcTerms("modified").getLabel(), LocalDate.now().toString())
                     .add(JsonLDTerm.dcTerms("creator").getLabel(), BrandingUtil.getInstallationBrandName())
                     .add("@type", JsonLDTerm.ore("ResourceMap").getLabel())
+                    //Add the version of our ORE format used
+                    .add(JsonLDTerm.schemaOrg("additionalType").getLabel(), DATAVERSE_ORE_FORMAT_VERSION)
+                    //Indicate which Dataverse version created it
+                    .add(JsonLDTerm.DVCore("generatedBy").getLabel(), dvSoftwareBuilder)
                     // Define an id for the map itself (separate from the @id of the dataset being
                     // described
                     .add("@id",
@@ -467,8 +521,10 @@ public class OREMap {
         }
     }
 
-    public static void injectSettingsService(SettingsServiceBean settingsSvc, DatasetFieldServiceBean datasetFieldSvc) {
+    //These are used to pick up various settings/constants from the application
+    public static void injectServices(SettingsServiceBean settingsSvc, DatasetFieldServiceBean datasetFieldSvc, SystemConfig systemCfg) {
         settingsService = settingsSvc;
         datasetFieldService = datasetFieldSvc;
+        systemConfig = systemCfg;
     }
 }
