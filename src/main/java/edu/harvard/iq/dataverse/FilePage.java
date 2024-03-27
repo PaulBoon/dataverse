@@ -1372,15 +1372,19 @@ public class FilePage implements java.io.Serializable {
     
     public String getEmbargoPhrase() {
         //Should only be getting called when there is an embargo
+        StringBuilder sb = new StringBuilder();
         if(file.isReleased()) {
             if(FileUtil.isActivelyEmbargoed(file)) {
-                return BundleUtil.getStringFromBundle("embargoed.until");
+                sb.append(BundleUtil.getStringFromBundle("embargoed.until"));
             } else {
-                return BundleUtil.getStringFromBundle("embargoed.wasthrough");
+                sb.append(BundleUtil.getStringFromBundle("embargoed.wasthrough"));
             }
         } else {
-            return BundleUtil.getStringFromBundle("embargoed.willbeuntil");
+            sb.append(BundleUtil.getStringFromBundle("embargoed.willbeuntil"));
         }
+        sb.append(" ");
+        sb.append(file.getEmbargo().getFormattedDateAvailable());
+        return sb.toString();
     }
 
     public boolean isValidRetentionSelection() {
@@ -1494,15 +1498,21 @@ public class FilePage implements java.io.Serializable {
 
     public String getRetentionPhrase() {
         //Should only be getting called when there is a retention
+        StringBuilder sb = new StringBuilder();
         if(file.isReleased()) {
             if(FileUtil.isRetentionExpired(file)) {
-                return BundleUtil.getStringFromBundle("retention.after");
+                sb.append(BundleUtil.getStringFromBundle("retention.after"));
             } else {
-                return BundleUtil.getStringFromBundle("retention.isfrom");
+                sb.append(BundleUtil.getStringFromBundle("retention.isfrom"));
             }
         } else {
-            return BundleUtil.getStringFromBundle("retention.willbeafter");
+            sb.append(BundleUtil.getStringFromBundle("retention.willbeafter"));
         }
+        sb.append(" ");
+        sb.append(file.getRetention().getFormattedDateUnavailable());
+        sb.append(", ");
+        sb.append(BundleUtil.getStringFromBundle("retention.enddateinfo"));
+        return sb.toString();
     }
 
     public String getToolTabTitle(){
