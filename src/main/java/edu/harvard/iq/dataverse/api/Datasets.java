@@ -1798,6 +1798,9 @@ public class Datasets extends AbstractApiBean {
         if (json.containsKey("fileIds")){
             try {
                 JsonArray fileIds = json.getJsonArray("fileIds");
+                if (fileIds.isEmpty()) {
+                    return error(Status.BAD_REQUEST, "No fileIds specified; empty array");
+                }
                 for (JsonValue jsv : fileIds) {
                     try {
                         DataFile dataFile = findDataFileOrDie(jsv.toString());
@@ -1807,7 +1810,7 @@ public class Datasets extends AbstractApiBean {
                     }
                 }
             } catch (ClassCastException ccex) {
-                return error(Status.BAD_REQUEST, "Invalid retention period; fileIds must be an array of id strings");
+                return error(Status.BAD_REQUEST, "Invalid retention period; fileIds must be an array of ids");
             } catch (NullPointerException npex) {
                 return error(Status.BAD_REQUEST, "Invalid retention period; no fileIds specified");
             }
@@ -1928,6 +1931,9 @@ public class Datasets extends AbstractApiBean {
         if (json.containsKey("fileIds")){
             try {
                 JsonArray fileIds = json.getJsonArray("fileIds");
+                if (fileIds.isEmpty()) {
+                    return error(Status.BAD_REQUEST, "No fileIds specified; empty array");
+                }
                 for (JsonValue jsv : fileIds) {
                     try {
                         DataFile dataFile = findDataFileOrDie(jsv.toString());
@@ -1937,7 +1943,7 @@ public class Datasets extends AbstractApiBean {
                     }
                 }
             } catch (ClassCastException ccex) {
-                return error(Status.BAD_REQUEST, "fileIds must be an array of id strings");
+                return error(Status.BAD_REQUEST, "fileIds must be an array of ids");
             } catch (NullPointerException npex) {
                 return error(Status.BAD_REQUEST, "No fileIds specified");
             }
