@@ -503,6 +503,41 @@ for `Fabrica <https://doi.datacite.org/>`_ and their APIs. You need to provide
 the same credentials (``username``, ``password``) to Dataverse software to mint and manage DOIs for you.
 As noted above, you should use one of the more secure options for setting the password.
 
+CrossRef-specific Settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+dataverse.pid.*.crossref.url
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+dataverse.pid.*.crossref.rest-api-url
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+dataverse.pid.*.crossref.username
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+dataverse.pid.*.crossref.password
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+dataverse.pid.*.crossref.depositor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+dataverse.pid.*.crossref.depositor-email
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+CrossRef is an experimental provider.
+PID Providers of type ``crossref`` require six additional parameters that define how the provider connects to CrossRef.
+CrossRef has two APIs that are used in Dataverse:
+
+The base URL of the `CrossRef <https://api.crossref.org>`_,
+used to mint and manage DOIs. Current valid values for ``dataverse.pid.*.crossref.url`` are "https://doi.crossref.org" and ``dataverse.pid.*.crossref.rest-api-url`` are "https://api.crossref.org" (production).
+``dataverse.pid.*.crossref.username=crusername``
+``dataverse.pid.*.crossref.password=secret``
+``dataverse.pid.*.crossref.depositor=xyz``
+``dataverse.pid.*.crossref.depositor-email=xyz@example.com``
+
+CrossRef uses `HTTP Basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_
+XML files can be POSTed to CrossRef where they are added to the submission queue to await processing
+`Post URL <https://doi.crossref.org/>`_
+REST API allows the search and reuse our members' metadata.
+`Rest API <https://api.crossref.org/>`_ and their APIs.
+You need to provide the same credentials (``username``, ``password``) to Dataverse software to mint and manage DOIs for you.
+As noted above, you should use one of the more secure options for setting the password.
+Depositor and Depositor Email are used for the generation and distribution of Depositor reports.
 
 .. _dataverse.pid.*.ezid:
 
@@ -532,8 +567,13 @@ dataverse.pid.*.permalink.separator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PermaLinks are a simple PID option intended for intranet and catalog use cases. They can be used without an external service or
-be configured with the ``base-url`` of a resolution service. PermaLinks also allow a custom ``separator`` to be used. (Note: when using multiple 
-PermaLink providers, you should avoid ambiguous authority/separator/shoulder combinations that would result in the same overall prefix.)
+be configured with the ``base-url`` of a resolution service. PermaLinks also allow a custom ``separator`` to be used.
+
+Note:
+
+- If you configure ``base-url``, it should include a "/" after the hostname like this: ``https://demo.dataverse.org/``.
+- When using multiple PermaLink providers, you should avoid ambiguous authority/separator/shoulder combinations that would result in the same overall prefix.
+- In general, PermaLink authority/shoulder values should be alphanumeric. For other cases, admins may need to consider the potential impact of special characters in S3 storage identifiers, resolver URLs, exports, etc.
 
 .. _dataverse.pid.*.handlenet:
 
@@ -1292,8 +1332,8 @@ Reported Working S3-Compatible Storage
  Note that for direct uploads and downloads, Dataverse redirects to the proxy-url but presigns the urls based on the ``dataverse.files.<id>.custom-endpoint-url``. Also, note that if you choose to enable ``dataverse.files.<id>.download-redirect`` the S3 URLs expire after 60 minutes by default. You can change that minute value to reflect a timeout value that’s more appropriate by using ``dataverse.files.<id>.url-expiration-minutes``.
 
 `Surf Object Store v2019-10-30 <https://www.surf.nl/en>`_
-  Set ``dataverse.files.<id>.payload-signing=true`` and ``dataverse.files.<id>.chunked-encoding=false`` to use Surf Object
-  Store.
+  Set ``dataverse.files.<id>.payload-signing=true``, ``dataverse.files.<id>.chunked-encoding=false`` and ``dataverse.files.<id>.path-style-request=true`` to use Surf Object
+  Store. You will need the Swift client (documented at <http://doc.swift.surfsara.nl/en/latest/Pages/Clients/s3cred.html>) to create the access key and secret key for the S3 interface.
 
 Note that the ``dataverse.files.<id>.proxy-url`` setting can be used in installations where the object store is proxied, but it should be considered an advanced option that will require significant expertise to properly configure. 
 For direct uploads and downloads, Dataverse redirects to the proxy-url but presigns the urls based on the ``dataverse.files.<id>.custom-endpoint-url``.
@@ -2442,6 +2482,15 @@ Defaults to ``5432``, the default PostgreSQL port.
 
 Can also be set via *MicroProfile Config API* sources, e.g. the environment variable ``DATAVERSE_DB_PORT``.
 
+dataverse.db.parameters
++++++++++++++++++++++++
+
+The PostgreSQL server connection parameters.
+
+Defaults to *empty string*
+
+Can also be set via *MicroProfile Config API* sources, e.g. the environment variable ``DATAVERSE_DB_PARAMETERS``.
+
 .. _dataverse.solr.host:
 
 dataverse.solr.host
@@ -3183,12 +3232,19 @@ Can also be set via any `supported MicroProfile Config API source`_, e.g. the en
 dataverse.spi.exporters.directory
 +++++++++++++++++++++++++++++++++
 
-This JVM option is used to configure the file system path where external Exporter JARs can be placed. See :ref:`external-exporters` for more information.
+For some background, see :ref:`external-exporters` and :ref:`inventory-of-external-exporters`.
 
-``./asadmin create-jvm-options '-Ddataverse.spi.exporters.directory=PATH_LOCATION_HERE'``
+This JVM option is used to configure the file system path where external exporter JARs should be loaded from. For example:
 
-If this value is set, Dataverse will examine all JARs in the specified directory and will use them to add, or replace existing, metadata export formats.
-If this value is not set (the default), Dataverse will not use external Exporters.
+``./asadmin create-jvm-options '-Ddataverse.spi.exporters.directory=/var/lib/dataverse/exporters'``
+
+If this value is set, Dataverse will examine all JARs in the specified directory and will use them to add new metadata export formats or (if the machine-readable name used in :ref:`export-dataset-metadata-api` is the same) replace built-in metatadata export formats.
+
+If this value is not set (the default), Dataverse will not load any external exporters.
+
+If you place a new JAR in this directory, you must restart Payara for Dataverse to load it.
+
+If the JAR is for an exporter that replaces built-in format, you must delete the cached exports and/or use a reExport API call (see :ref:`batch-exports-through-the-api`) for the new format to be visible for existing datasets.
 
 Can also be set via *MicroProfile Config API* sources, e.g. the environment variable ``DATAVERSE_SPI_EXPORTERS_DIRECTORY``.
 
@@ -3288,9 +3344,10 @@ please find all known feature flags below. Any of these flags can be activated u
       - Removes the reason field in the `Publish/Return To Author` dialog that was added as a required field in v6.2 and makes the reason an optional parameter in the :ref:`return-a-dataset` API call. 
       - ``Off``
 
-
 **Note:** Feature flags can be set via any `supported MicroProfile Config API source`_, e.g. the environment variable
 ``DATAVERSE_FEATURE_XXX`` (e.g. ``DATAVERSE_FEATURE_API_SESSION_AUTH=1``). These environment variables can be set in your shell before starting Payara. If you are using :doc:`Docker for development </container/dev-usage>`, you can set them in the `docker compose <https://docs.docker.com/compose/environment-variables/set-environment-variables/>`_ file.
+
+To check the status of feature flags via API, see :ref:`list-all-feature-flags` in the API Guide.
 
 .. _:ApplicationServerSettings:
 
