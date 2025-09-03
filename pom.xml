@@ -858,6 +858,11 @@
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
                     </archive>
+                    <!-- FakeHandleProvider classes should be packaged as jar separately -->
+                    <packagingExcludes>
+                        WEB-INF/classes/edu/harvard/iq/dataverse/pidproviders/handle/fake/FakeHandleProvider.class,
+                        WEB-INF/classes/edu/harvard/iq/dataverse/pidproviders/handle/fake/FakeHandleProviderFactory.class
+                    </packagingExcludes>
                 </configuration>
             </plugin>
             <plugin>
@@ -1199,5 +1204,30 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>fake-handle-provider</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>fake-handle-provider-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>src/assembly/fake-handle-provider.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
     </profiles>
 </project>
